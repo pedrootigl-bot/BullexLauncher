@@ -50,24 +50,76 @@ export type JourneyProgress = {
   daysLeft: number
 }
 
+export type RankId = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
+
+export type RankTier = {
+  id: RankId
+  label: string
+  minLevel: number
+  maxLevel: number | null
+}
+
+export const RANK_TIERS: RankTier[] = [
+  { id: 'bronze', label: 'Bronze', minLevel: 1, maxLevel: 4 },
+  { id: 'silver', label: 'Prata', minLevel: 5, maxLevel: 9 },
+  { id: 'gold', label: 'Ouro', minLevel: 10, maxLevel: 14 },
+  { id: 'platinum', label: 'Platina', minLevel: 15, maxLevel: 19 },
+  { id: 'diamond', label: 'Diamante', minLevel: 20, maxLevel: null },
+]
+
+export function getRankByLevel(level: number) {
+  const safeLevel = Math.max(1, level)
+  const current =
+    [...RANK_TIERS].reverse().find((tier) => safeLevel >= tier.minLevel) ?? RANK_TIERS[0]
+  const currentIndex = RANK_TIERS.findIndex((tier) => tier.id === current.id)
+  const next = currentIndex >= 0 && currentIndex < RANK_TIERS.length - 1
+    ? RANK_TIERS[currentIndex + 1]
+    : null
+
+  const levelsToNext = next ? Math.max(0, next.minLevel - safeLevel) : 0
+
+  return {
+    current,
+    next,
+    levelsToNext,
+    progressInRank:
+      current.maxLevel == null
+        ? 100
+        : Math.min(
+            100,
+            Math.round(
+              ((safeLevel - current.minLevel) /
+                (current.maxLevel - current.minLevel + 1)) *
+                100,
+            ),
+          ),
+  }
+}
+
 export type PassRewardState = 'claimed' | 'claimable' | 'locked'
 
 export type PassRewardKind =
-  | 'cashback'
-  | 'ticket'
-  | 'points'
-  | 'report'
-  | 'chest'
-  | 'badge'
-  | 'bonus'
   | 'balance'
-  | 'gift'
+  | 'ticket'
+  | 'riskfree'
+  | 'cashback'
+  | 'xpboost'
+  | 'bonus'
+  | 'coupon'
+  | 'vip'
+  | 'multiplier'
+  | 'badge'
+  | 'avatar'
+  | 'points'
 
 export type PassReward = {
   level: number
   title: string
+  subtitle: string
   state: PassRewardState
   kind: PassRewardKind
+  /** Pontos bônus creditados no nível ao resgatar (trilha). */
+  points?: number
 }
 
 export type PassTrack = {
@@ -83,6 +135,9 @@ export type NextPassReward = {
   title: string
   subtitle: string
   tags: string[]
+  kind: PassRewardKind
+  detail: string
+  premiumTitle?: string
 }
 
 export type SeasonMissionIcon = 'deposit' | 'calendar' | 'chart' | 'explore'
@@ -131,56 +186,359 @@ export const mockJourney: JourneyProgress = {
   currentPoints: 620,
   targetPoints: 1000,
   nextRewardLabel: 'Próxima recompensa',
-  nextRewardTitle: 'Caixa Premium',
+  nextRewardTitle: 'R$ 25 saldo promocional',
   remainingPoints: 380,
-  footerTitle: 'GRANDES CONQUISTAS GERAM GRANDES RECOMPENSAS',
-  footerSubtitle: 'EVOLUA. OPERE. SEJA LENDÁRIO.',
-  footerCta: 'VER TODAS AS RECOMPENSAS',
-  seasonLabel: 'Temporada Atual · Outubro 2026',
-  daysLeft: 11,
+  footerTitle: 'EVOLUA. OPERE. CONQUISTE.',
+  footerSubtitle: 'Complete missões para avançar no passe.',
+  footerCta: 'Ver regras da temporada',
+  seasonLabel: 'Temporada 09 · Setembro 2026',
+  daysLeft: 9,
 }
 
 export const mockNextPassReward: NextPassReward = {
   level: 4,
-  title: 'Caixa Premium',
-  subtitle: 'Até R$ 500 em recompensas',
-  tags: ['BÔNUS', 'CASHBACK', 'TICKETS', 'E MAIS'],
+  title: 'R$ 25',
+  subtitle: 'Saldo promocional',
+  tags: ['SALDO', 'PASSE'],
+  kind: 'balance',
+  detail: 'Saldo promocional creditado na conta para uso em operações elegíveis.',
+  premiumTitle: 'VIP por 7 dias',
 }
 
 export const mockPassTracks: PassTrack[] = [
   {
     id: 'free',
-    label: 'Gratuito',
-    description: 'Recompensas liberadas a cada nível da temporada.',
+    label: 'BullPass',
+    description: 'Todo trader evolui por aqui.',
     premium: false,
     rewards: [
-      { level: 1, title: 'R$ 10 em cashback', state: 'claimed', kind: 'cashback' },
-      { level: 2, title: '1 Ticket sorteio', state: 'claimed', kind: 'ticket' },
-      { level: 3, title: '+200 pontos bônus', state: 'claimable', kind: 'points' },
-      { level: 4, title: 'Relatório Premium', state: 'locked', kind: 'report' },
-      { level: 5, title: 'Caixa Surpresa', state: 'locked', kind: 'chest' },
-      { level: 6, title: 'R$ 25 cashback', state: 'locked', kind: 'cashback' },
-      { level: 7, title: '2 Tickets', state: 'locked', kind: 'ticket' },
-      { level: 8, title: 'Caixa Épica', state: 'locked', kind: 'chest' },
+      {
+        level: 1,
+        title: 'R$ 5',
+        subtitle: 'Saldo promocional',
+        state: 'claimed',
+        kind: 'balance',
+      },
+      {
+        level: 2,
+        title: '+1',
+        subtitle: 'Ticket',
+        state: 'claimed',
+        kind: 'ticket',
+      },
+      {
+        level: 3,
+        title: '+200 pontos',
+        subtitle: 'Impulso de pontos',
+        state: 'claimable',
+        kind: 'points',
+        points: 200,
+      },
+      {
+        level: 4,
+        title: 'RiskFree',
+        subtitle: 'Operação protegida',
+        state: 'locked',
+        kind: 'riskfree',
+      },
+      {
+        level: 5,
+        title: 'R$ 10',
+        subtitle: 'Cashback',
+        state: 'locked',
+        kind: 'cashback',
+      },
+      {
+        level: 6,
+        title: '+2',
+        subtitle: 'Tickets',
+        state: 'locked',
+        kind: 'ticket',
+      },
+      {
+        level: 7,
+        title: '+25% pontos',
+        subtitle: 'Boost 24h',
+        state: 'locked',
+        kind: 'xpboost',
+      },
+      {
+        level: 8,
+        title: 'R$ 15',
+        subtitle: 'Saldo promocional',
+        state: 'locked',
+        kind: 'balance',
+      },
+      {
+        level: 9,
+        title: '+3',
+        subtitle: 'Tickets',
+        state: 'locked',
+        kind: 'ticket',
+      },
+      {
+        level: 10,
+        title: '+400 pontos',
+        subtitle: 'Impulso de pontos',
+        state: 'locked',
+        kind: 'points',
+        points: 400,
+      },
+      {
+        level: 11,
+        title: 'RiskFree',
+        subtitle: 'Operação protegida',
+        state: 'locked',
+        kind: 'riskfree',
+      },
+      {
+        level: 12,
+        title: 'R$ 20',
+        subtitle: 'Cashback',
+        state: 'locked',
+        kind: 'cashback',
+      },
+      {
+        level: 13,
+        title: '+50% pontos',
+        subtitle: 'Boost 48h',
+        state: 'locked',
+        kind: 'xpboost',
+      },
+      {
+        level: 14,
+        title: '10% OFF',
+        subtitle: 'Cupom depósito',
+        state: 'locked',
+        kind: 'coupon',
+      },
+      {
+        level: 15,
+        title: 'Consistente',
+        subtitle: 'Badge exclusivo',
+        state: 'locked',
+        kind: 'badge',
+      },
     ],
   },
   {
     id: 'premium',
-    label: 'Premium',
-    description: 'Benefícios exclusivos com vantagem máxima.',
+    label: 'BullPass Premium',
+    description: 'Benefícios adicionais para quem quer ir mais longe.',
     premium: true,
     rewards: [
-      { level: 1, title: 'R$ 50 cashback', state: 'claimed', kind: 'cashback' },
-      { level: 2, title: 'Bônus 50% taxas', state: 'claimed', kind: 'bonus' },
-      { level: 3, title: 'R$ 100 em saldo', state: 'claimable', kind: 'balance' },
-      { level: 4, title: 'Emblema VIP', state: 'locked', kind: 'badge' },
-      { level: 5, title: 'Caixa Premium', state: 'locked', kind: 'chest' },
-      { level: 6, title: 'Cupom 30% taxas', state: 'locked', kind: 'bonus' },
-      { level: 7, title: 'R$ 200 saldo', state: 'locked', kind: 'balance' },
-      { level: 8, title: 'Caixa Lendária', state: 'locked', kind: 'gift' },
+      {
+        level: 1,
+        title: 'R$ 20',
+        subtitle: 'Saldo promocional',
+        state: 'claimed',
+        kind: 'balance',
+      },
+      {
+        level: 2,
+        title: 'US$ 10',
+        subtitle: 'RiskFree',
+        state: 'claimed',
+        kind: 'riskfree',
+      },
+      {
+        level: 3,
+        title: '+5',
+        subtitle: 'Tickets',
+        state: 'claimable',
+        kind: 'ticket',
+      },
+      {
+        level: 4,
+        title: '7 dias',
+        subtitle: 'VIP',
+        state: 'locked',
+        kind: 'vip',
+      },
+      {
+        level: 5,
+        title: 'R$ 50',
+        subtitle: 'Cashback',
+        state: 'locked',
+        kind: 'cashback',
+      },
+      {
+        level: 6,
+        title: '2× pontos',
+        subtitle: 'Por 24h',
+        state: 'locked',
+        kind: 'multiplier',
+      },
+      {
+        level: 7,
+        title: '+25%',
+        subtitle: 'Bônus depósito',
+        state: 'locked',
+        kind: 'bonus',
+      },
+      {
+        level: 8,
+        title: 'R$ 75',
+        subtitle: 'Saldo promocional',
+        state: 'locked',
+        kind: 'balance',
+      },
+      {
+        level: 9,
+        title: '+8',
+        subtitle: 'Tickets',
+        state: 'locked',
+        kind: 'ticket',
+      },
+      {
+        level: 10,
+        title: '14 dias',
+        subtitle: 'VIP',
+        state: 'locked',
+        kind: 'vip',
+      },
+      {
+        level: 11,
+        title: 'US$ 25',
+        subtitle: 'RiskFree',
+        state: 'locked',
+        kind: 'riskfree',
+      },
+      {
+        level: 12,
+        title: '3× pontos',
+        subtitle: 'Por 48h',
+        state: 'locked',
+        kind: 'multiplier',
+      },
+      {
+        level: 13,
+        title: 'R$ 100',
+        subtitle: 'Cashback',
+        state: 'locked',
+        kind: 'cashback',
+      },
+      {
+        level: 14,
+        title: '+40%',
+        subtitle: 'Bônus depósito',
+        state: 'locked',
+        kind: 'bonus',
+      },
+      {
+        level: 15,
+        title: 'Elite',
+        subtitle: 'Badge Premium',
+        state: 'locked',
+        kind: 'badge',
+      },
     ],
   },
 ]
+
+export const PASS_KIND_LABELS: Record<PassRewardKind, string> = {
+  balance: 'Saldo promocional',
+  ticket: 'Tickets',
+  riskfree: 'RiskFree',
+  cashback: 'Cashback',
+  xpboost: 'Impulso de pontos',
+  bonus: 'Bônus',
+  coupon: 'Cupom',
+  vip: 'Status VIP',
+  multiplier: 'Multiplicador',
+  badge: 'Badge',
+  avatar: 'Personalização',
+  points: 'Pontos bônus',
+}
+
+const PASS_KIND_TAGS: Record<PassRewardKind, string[]> = {
+  balance: ['SALDO', 'PASSE'],
+  ticket: ['TICKET', 'CAMPANHA'],
+  riskfree: ['RISKFREE', 'PROTEÇÃO'],
+  cashback: ['CASHBACK', 'PASSE'],
+  xpboost: ['PONTOS', 'BOOST'],
+  bonus: ['BÔNUS', 'DEPÓSITO'],
+  coupon: ['CUPOM', 'EXCLUSIVO'],
+  vip: ['VIP', 'STATUS'],
+  multiplier: ['MULTIPLICADOR', 'PONTOS'],
+  badge: ['BADGE', 'PERFIL'],
+  avatar: ['AVATAR', 'PERFIL'],
+  points: ['PONTOS', 'BÔNUS'],
+}
+
+const PASS_KIND_DETAILS: Record<PassRewardKind, string> = {
+  balance: 'Saldo promocional creditado na conta para uso em operações elegíveis.',
+  ticket: 'Tickets para participar de campanhas e sorteios digitais da temporada.',
+  riskfree: 'Operação protegida: cobertura parcial conforme regras da campanha.',
+  cashback: 'Parte do valor operado retorna como cashback na plataforma.',
+  xpboost: 'Impulso temporário de pontos para acelerar a progressão no passe.',
+  bonus: 'Bônus adicional em depósito elegível, sujeito às regras da campanha.',
+  coupon: 'Cupom exclusivo desbloqueado para uso na plataforma.',
+  vip: 'Acesso temporário a benefícios VIP dentro da Bullex.',
+  multiplier: 'Multiplicador de pontos ou tickets por um período limitado.',
+  badge: 'Badge digital exibida no perfil do trader.',
+  avatar: 'Item de personalização digital para o perfil.',
+  points: 'Pontos bônus creditados imediatamente na jornada da temporada.',
+}
+
+/** Próxima recompensa do passe = item do nível atual + 1. */
+export function getNextPassReward(
+  currentLevel: number,
+  options?: { hasPremium?: boolean },
+): NextPassReward | null {
+  const freeTrackData = mockPassTracks.find((track) => track.id === 'free')
+  const premiumTrackData = mockPassTracks.find((track) => track.id === 'premium')
+  const nextLevel = currentLevel + 1
+  const freeReward = freeTrackData?.rewards.find((reward) => reward.level === nextLevel)
+
+  if (!freeReward) return null
+
+  const premiumReward = premiumTrackData?.rewards.find((reward) => reward.level === nextLevel)
+  const detail = PASS_KIND_DETAILS[freeReward.kind] ?? 'Recompensa do próximo nível do Passe.'
+
+  return {
+    level: nextLevel,
+    title: freeReward.title,
+    subtitle: freeReward.subtitle,
+    tags: PASS_KIND_TAGS[freeReward.kind] ?? [PASS_KIND_LABELS[freeReward.kind], 'PASSE'],
+    kind: freeReward.kind,
+    detail,
+    premiumTitle:
+      options?.hasPremium && premiumReward
+        ? `${premiumReward.title} · ${premiumReward.subtitle}`
+        : premiumReward
+          ? `${premiumReward.title} · ${premiumReward.subtitle}`
+          : undefined,
+  }
+}
+
+export function getPassRewardPoints(reward: PassReward): number {
+  if (typeof reward.points === 'number' && Number.isFinite(reward.points)) {
+    return Math.max(0, Math.round(reward.points))
+  }
+
+  if (reward.kind !== 'points' && reward.kind !== 'xpboost') return 0
+
+  const match = reward.title.match(/\+?\s*([\d.]+)\s*(?:XP|pontos)/i)
+  if (!match) return 0
+
+  return Math.max(0, Number(match[1].replace(/\./g, '')))
+}
+
+/** Estado dinâmico da trilha: libera tudo até o nível atual. */
+export function resolvePassRewardState(
+  reward: PassReward,
+  currentLevel: number,
+  claimedLevels: number[],
+): PassRewardState {
+  if (claimedLevels.includes(reward.level)) return 'claimed'
+  if (reward.level <= currentLevel) return 'claimable'
+  return 'locked'
+}
+
+export function getInitiallyClaimedLevels(track: PassTrack): number[] {
+  return track.rewards.filter((reward) => reward.state === 'claimed').map((reward) => reward.level)
+}
 
 export function applyJourneyPoints(
   journey: JourneyProgress,
@@ -286,13 +644,11 @@ export const seasonMissionCtas: Record<number, string> = {
 
 export const navItems = [
   { id: 'inicio', label: 'Início', path: '/inicio' },
-  { id: 'negociacao', label: 'Negociação', path: '/inicio' },
-  { id: 'mercados', label: 'Mercados', path: '/inicio' },
   { id: 'bullstart', label: 'BullStart', path: '/missoes', badge: 'NOVO' },
-  { id: 'promocoes', label: 'Promoções', path: '/inicio' },
   { id: 'recompensas', label: 'Recompensas', path: '/recompensas' },
   { id: 'historico', label: 'Histórico', path: '/historico' },
-  { id: 'suporte', label: 'Suporte', path: '/inicio' },
+  { id: 'suporte', label: 'Suporte', path: '/suporte' },
+  { id: 'administrador', label: 'Administrador', path: '/administrador' },
 ] as const
 
 export type PromoBanner = {

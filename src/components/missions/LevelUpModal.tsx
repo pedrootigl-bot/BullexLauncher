@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { getRankByLevel } from '../../data/missionsMock'
 import { playLevelUpFanfare } from '../../utils/rewardSounds'
 
 type LevelUpModalProps = {
@@ -18,6 +19,9 @@ export function LevelUpModal({ fromLevel, toLevel, onClose }: LevelUpModalProps)
   const [progress, setProgress] = useState(0)
   const [displayLevel, setDisplayLevel] = useState(fromLevel)
   const [leveled, setLeveled] = useState(false)
+  const fromRank = getRankByLevel(fromLevel).current
+  const toRank = getRankByLevel(toLevel).current
+  const rankUp = fromRank.id !== toRank.id
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -139,7 +143,19 @@ export function LevelUpModal({ fromLevel, toLevel, onClose }: LevelUpModalProps)
 
         <p className="bs-levelup__sub">
           Você evoluiu do nível <strong>{fromLevel}</strong> para o nível{' '}
-          <strong>{toLevel}</strong>. Continue completando missões e suba ainda mais.
+          <strong>{toLevel}</strong>
+          {rankUp ? (
+            <>
+              {' '}
+              e alcançou o elo <strong>{toRank.label}</strong>
+            </>
+          ) : (
+            <>
+              {' '}
+              · elo <strong>{toRank.label}</strong>
+            </>
+          )}
+          . Continue completando missões e suba ainda mais.
         </p>
 
         <div className="bs-levelup__tips">

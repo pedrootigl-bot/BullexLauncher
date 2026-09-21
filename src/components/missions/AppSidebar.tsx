@@ -3,90 +3,152 @@ import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import { navItems } from '../../data/missionsMock'
 
-const SIDEBAR_STORAGE_KEY = 'bs-sidebar-open'
+const MOBILE_QUERY = '(max-width: 1100px)'
 
-function readSidebarOpen() {
-  try {
-    const stored = sessionStorage.getItem(SIDEBAR_STORAGE_KEY)
-    return stored === null ? true : stored === '1'
-  } catch {
-    return true
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY).matches : false,
+  )
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_QUERY)
+    function onChange() {
+      setIsMobile(media.matches)
+    }
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  return isMobile
+}
+
+function isNavActive(pathname: string, id: (typeof navItems)[number]['id']) {
+  switch (id) {
+    case 'inicio':
+      return pathname === '/inicio'
+    case 'bullstart':
+      return pathname.startsWith('/missoes')
+    case 'recompensas':
+      return pathname.startsWith('/recompensas')
+    case 'historico':
+      return pathname.startsWith('/historico')
+    case 'suporte':
+      return pathname.startsWith('/suporte')
+    case 'administrador':
+      return pathname.startsWith('/administrador')
+    default: {
+      const _exhaustive: never = id
+      return _exhaustive
+    }
   }
 }
 
 export function AppSidebar() {
   const location = useLocation()
-  const [open, setOpen] = useState(readSidebarOpen)
+  const isMobile = useIsMobile()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [burgerSlot, setBurgerSlot] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(SIDEBAR_STORAGE_KEY, open ? '1' : '0')
-    } catch {
-      // ignore
+    setBurgerSlot(document.getElementById('bs-topbar-burger-slot'))
+  }, [])
+
+  useEffect(() => {
+    if (isMobile) {
+      document.documentElement.classList.add('bs-sidebar-collapsed')
+      return () => document.documentElement.classList.remove('bs-sidebar-collapsed')
     }
 
-    document.documentElement.classList.toggle('bs-sidebar-collapsed', !open)
+    document.documentElement.classList.remove('bs-sidebar-collapsed')
+    return undefined
+  }, [isMobile])
 
-    return () => document.documentElement.classList.remove('bs-sidebar-collapsed')
-  }, [open])
+  useEffect(() => {
+    if (!mobileOpen) return undefined
 
-  if (!open) {
-    return createPortal(
-      <button
-        type="button"
-        className="bs-sidebar-reopen"
-        aria-label="Abrir menu"
-        onClick={() => setOpen(true)}
-      >
-        <PanelOpenIcon />
-      </button>,
-      document.body,
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [mobileOpen])
+
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
+  if (isMobile) {
+    return (
+      <>
+        {burgerSlot
+          ? createPortal(
+              <button
+                type="button"
+                className={`bs-mobile-burger${mobileOpen ? ' is-open' : ''}`}
+                aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
+                aria-expanded={mobileOpen}
+                aria-controls="bs-mobile-nav"
+                onClick={() => setMobileOpen((open) => !open)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>,
+              burgerSlot,
+            )
+          : null}
+
+        <div
+          className={`bs-mobile-nav-backdrop${mobileOpen ? ' is-open' : ''}`}
+          aria-hidden={!mobileOpen}
+          onClick={() => setMobileOpen(false)}
+        />
+
+        <aside
+          id="bs-mobile-nav"
+          className={`bs-mobile-nav${mobileOpen ? ' is-open' : ''}`}
+          aria-label="Menu principal"
+          aria-hidden={!mobileOpen}
+        >
+          <div className="bs-mobile-nav__head">
+            <strong>Menu</strong>
+            <button
+              type="button"
+              className="bs-mobile-nav__close"
+              aria-label="Fechar menu"
+              onClick={() => setMobileOpen(false)}
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          <nav className="bs-sidebar__nav" aria-label="Menu principal">
+            <NavLinks pathname={location.pathname} onNavigate={() => setMobileOpen(false)} />
+          </nav>
+
+          <div className="bs-sidebar__promo">
+            <span className="bs-sidebar__promo-icon" aria-hidden="true">
+              <TrophyIcon />
+            </span>
+            <p>TRADING MAIS INTELIGENTE PARA VOCÊ.</p>
+          </div>
+        </aside>
+      </>
     )
   }
 
   return (
     <aside className="bs-sidebar">
-      <div className="bs-sidebar__top">
-        <button
-          type="button"
-          className="bs-sidebar__close"
-          aria-label="Fechar menu"
-          onClick={() => setOpen(false)}
-        >
-          <PanelCloseIcon />
-        </button>
-      </div>
-
       <nav className="bs-sidebar__nav" aria-label="Menu principal">
-        {navItems.map((item) => {
-          const isActive =
-            item.id === 'inicio'
-              ? location.pathname === '/inicio'
-              : item.id === 'bullstart'
-                ? location.pathname.startsWith('/missoes')
-                : item.id === 'recompensas'
-                  ? location.pathname.startsWith('/recompensas')
-                  : item.id === 'historico'
-                    ? location.pathname.startsWith('/historico')
-                    : false
-
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className={`bs-sidebar__link${isActive ? ' is-active' : ''}`}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <span className="bs-sidebar__icon" aria-hidden="true">
-                <NavIcon id={item.id} />
-              </span>
-              <span>{item.label}</span>
-              {'badge' in item && item.badge ? (
-                <span className="bs-sidebar__badge">{item.badge}</span>
-              ) : null}
-            </Link>
-          )
-        })}
+        <NavLinks pathname={location.pathname} />
       </nav>
 
       <div className="bs-sidebar__promo">
@@ -99,18 +161,44 @@ export function AppSidebar() {
   )
 }
 
-function PanelCloseIcon() {
+function NavLinks({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string
+  onNavigate?: () => void
+}) {
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M15 6 9 12l6 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <>
+      {navItems.map((item) => {
+        const isActive = isNavActive(pathname, item.id)
+
+        return (
+          <Link
+            key={item.id}
+            to={item.path}
+            className={`bs-sidebar__link${isActive ? ' is-active' : ''}`}
+            aria-current={isActive ? 'page' : undefined}
+            onClick={onNavigate}
+          >
+            <span className="bs-sidebar__icon" aria-hidden="true">
+              <NavIcon id={item.id} />
+            </span>
+            <span>{item.label}</span>
+            {'badge' in item && item.badge ? (
+              <span className="bs-sidebar__badge">{item.badge}</span>
+            ) : null}
+          </Link>
+        )
+      })}
+    </>
   )
 }
 
-function PanelOpenIcon() {
+function CloseIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
     </svg>
   )
 }
@@ -134,30 +222,10 @@ function NavIcon({ id }: { id: (typeof navItems)[number]['id'] }) {
           <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z" />
         </svg>
       )
-    case 'negociacao':
-      return (
-        <svg {...props}>
-          <path d="M4 16 9 9l4 4 7-9" />
-          <path d="M15 4h5v5" />
-        </svg>
-      )
-    case 'mercados':
-      return (
-        <svg {...props}>
-          <path d="M4 19V5M4 19h16" />
-          <path d="M8 15v-4M12 15V8M16 15v-6" />
-        </svg>
-      )
     case 'bullstart':
       return (
         <svg {...props}>
           <path d="M12 3 14.5 8.5 20.5 9.2 16 13.4 17.2 19.3 12 16.4 6.8 19.3 8 13.4 3.5 9.2 9.5 8.5 12 3Z" />
-        </svg>
-      )
-    case 'promocoes':
-      return (
-        <svg {...props}>
-          <path d="M12 3v18M8 7h5.5a2.5 2.5 0 0 1 0 5H8m0 0h6a2.5 2.5 0 0 1 0 5H8" />
         </svg>
       )
     case 'recompensas':
@@ -181,6 +249,14 @@ function NavIcon({ id }: { id: (typeof navItems)[number]['id'] }) {
           <circle cx="12" cy="12" r="8" />
           <path d="M9.2 9.2a2.8 2.8 0 0 1 5.4 1c0 1.8-2.7 2.2-2.7 4" />
           <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none" />
+        </svg>
+      )
+    case 'administrador':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="8" r="3.2" />
+          <path d="M5.5 19.5c1.4-3.2 3.8-4.8 6.5-4.8s5.1 1.6 6.5 4.8" />
+          <path d="M17.5 4.8 19 6.3l-1.5 1.5M19 6.3h-2.4" />
         </svg>
       )
     default: {

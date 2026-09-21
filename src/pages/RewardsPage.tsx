@@ -21,7 +21,7 @@ const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
 ]
 
 export function RewardsPage() {
-  const [filter, setFilter] = useState<StatusFilter>('available')
+  const [filter, setFilter] = useState<StatusFilter>('all')
   const [selectedId, setSelectedId] = useState<string | null>(
     mockRewardCoupons.find((item) => item.status === 'available')?.id ?? mockRewardCoupons[0]?.id ?? null,
   )
@@ -31,6 +31,16 @@ export function RewardsPage() {
     if (filter === 'all') return mockRewardCoupons
     return mockRewardCoupons.filter((item) => item.status === filter)
   }, [filter])
+
+  const filterCounts = useMemo(
+    () => ({
+      all: mockRewardCoupons.length,
+      available: mockRewardCoupons.filter((item) => item.status === 'available').length,
+      used: mockRewardCoupons.filter((item) => item.status === 'used').length,
+      expired: mockRewardCoupons.filter((item) => item.status === 'expired').length,
+    }),
+    [],
+  )
 
   const selected =
     coupons.find((item) => item.id === selectedId) ??
@@ -56,10 +66,10 @@ export function RewardsPage() {
             <div className="bs-rewards__hero-copy">
               <p className="bs-rewards__eyebrow">RECOMPENSAS</p>
               <h1 id="bs-rewards-title">
-                Seus <span>cupons</span> e prêmios
+                Seus <span>cupons</span>
               </h1>
               <p className="bs-rewards__lead">
-                Consulte nome, validade, regras e status de cada cupom conquistado no BullStart.
+                Consulte validade, regras e status de cada cupom conquistado no BullStart.
               </p>
             </div>
 
@@ -73,7 +83,11 @@ export function RewardsPage() {
           </section>
 
           <section className="bs-rewards__stats" aria-label="Resumo de cupons">
-            <article className="bs-rewards-stat">
+            <button
+              type="button"
+              className={`bs-rewards-stat${filter === 'available' ? ' is-active' : ''}`}
+              onClick={() => handleFilterChange('available')}
+            >
               <span className="bs-rewards-stat__icon" aria-hidden="true">
                 <TicketIcon />
               </span>
@@ -81,27 +95,35 @@ export function RewardsPage() {
                 <p>Disponíveis</p>
                 <strong>{stats.available}</strong>
               </div>
-            </article>
-            <article className="bs-rewards-stat">
-              <span className="bs-rewards-stat__icon" aria-hidden="true">
+            </button>
+            <button
+              type="button"
+              className={`bs-rewards-stat${filter === 'used' ? ' is-active' : ''}`}
+              onClick={() => handleFilterChange('used')}
+            >
+              <span className="bs-rewards-stat__icon is-used" aria-hidden="true">
                 <CheckIcon />
               </span>
               <div>
                 <p>Utilizados</p>
                 <strong>{stats.used}</strong>
               </div>
-            </article>
-            <article className="bs-rewards-stat">
-              <span className="bs-rewards-stat__icon" aria-hidden="true">
+            </button>
+            <button
+              type="button"
+              className={`bs-rewards-stat${filter === 'expired' ? ' is-active' : ''}`}
+              onClick={() => handleFilterChange('expired')}
+            >
+              <span className="bs-rewards-stat__icon is-expired" aria-hidden="true">
                 <ClockIcon />
               </span>
               <div>
                 <p>Expirados</p>
                 <strong>{stats.expired}</strong>
               </div>
-            </article>
-            <article className="bs-rewards-stat">
-              <span className="bs-rewards-stat__icon" aria-hidden="true">
+            </button>
+            <article className="bs-rewards-stat is-static">
+              <span className="bs-rewards-stat__icon is-date" aria-hidden="true">
                 <CalendarIcon />
               </span>
               <div>
@@ -115,22 +137,26 @@ export function RewardsPage() {
             <div className="bs-rewards__panel-head">
               <div>
                 <h2 id="bs-rewards-list-title">Meus cupons</h2>
-                <p>Selecione um cupom para ver os detalhes completos.</p>
+                <p>
+                  {coupons.length}{' '}
+                  {coupons.length === 1 ? 'cupom neste filtro' : 'cupons neste filtro'}
+                </p>
               </div>
 
-              <label className="bs-rewards__filter">
-                <span className="sr-only">Filtrar por status</span>
-                <select
-                  value={filter}
-                  onChange={(event) => handleFilterChange(event.target.value as StatusFilter)}
-                >
-                  {FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="bs-filter" role="group" aria-label="Filtrar por status">
+                {FILTER_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`bs-filter__chip${filter === option.value ? ' is-active' : ''}`}
+                    aria-pressed={filter === option.value}
+                    onClick={() => handleFilterChange(option.value)}
+                  >
+                    {option.label}
+                    <em>{filterCounts[option.value]}</em>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="bs-rewards__layout">
@@ -140,7 +166,7 @@ export function RewardsPage() {
                     key={coupon.id}
                     type="button"
                     role="listitem"
-                    className={`bs-coupon-card${selected?.id === coupon.id ? ' is-active' : ''}`}
+                    className={`bs-coupon-card bs-coupon-card--${coupon.type}${selected?.id === coupon.id ? ' is-active' : ''}`}
                     onClick={() => setSelectedId(coupon.id)}
                   >
                     <span className={`bs-coupon-card__badge bs-coupon-card__badge--${coupon.type}`}>
@@ -150,7 +176,9 @@ export function RewardsPage() {
                       <strong>{coupon.name}</strong>
                       <em>{coupon.valueLabel}</em>
                       <span className="bs-coupon-card__meta">
-                        Vence em {coupon.expiresAt}
+                        <span>{couponTypeLabel[coupon.type]}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>Vence {coupon.expiresAt}</span>
                       </span>
                     </span>
                     <span className={`bs-coupon-card__status bs-coupon-card__status--${coupon.status}`}>
@@ -180,8 +208,29 @@ export function RewardsPage() {
 }
 
 function CouponDetail({ coupon }: { coupon: RewardCoupon }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleUseCoupon() {
+    try {
+      await navigator.clipboard.writeText(coupon.code)
+    } catch {
+      const input = document.createElement('textarea')
+      input.value = coupon.code
+      input.setAttribute('readonly', '')
+      input.style.position = 'fixed'
+      input.style.opacity = '0'
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+    }
+
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1800)
+  }
+
   return (
-    <div className={`bs-coupon-detail bs-coupon-detail--${coupon.status}`}>
+    <div key={coupon.id} className={`bs-coupon-detail bs-coupon-detail--${coupon.status}`}>
       <div className="bs-coupon-detail__head">
         <span className={`bs-coupon-detail__type bs-coupon-detail__type--${coupon.type}`}>
           <TypeIcon type={coupon.type} />
@@ -196,9 +245,22 @@ function CouponDetail({ coupon }: { coupon: RewardCoupon }) {
       <p className="bs-coupon-detail__value">{coupon.valueLabel}</p>
       <p className="bs-coupon-detail__desc">{coupon.description}</p>
 
-      <div className="bs-coupon-detail__code">
-        <span>Código do cupom</span>
-        <strong>{coupon.code}</strong>
+      <div className={`bs-coupon-detail__code${copied ? ' is-copied' : ''}`}>
+        <div>
+          <span>Código do cupom</span>
+          <strong>{coupon.code}</strong>
+        </div>
+        {coupon.status === 'available' ? (
+          <button
+            type="button"
+            className="bs-coupon-detail__copy"
+            onClick={() => {
+              void handleUseCoupon()
+            }}
+          >
+            {copied ? 'Copiado' : 'Copiar'}
+          </button>
+        ) : null}
       </div>
 
       <dl className="bs-coupon-detail__grid">
@@ -229,8 +291,14 @@ function CouponDetail({ coupon }: { coupon: RewardCoupon }) {
       </dl>
 
       {coupon.status === 'available' ? (
-        <button type="button" className="bs-coupon-detail__cta">
-          Usar cupom
+        <button
+          type="button"
+          className={`bs-coupon-detail__cta${copied ? ' is-copied' : ''}`}
+          onClick={() => {
+            void handleUseCoupon()
+          }}
+        >
+          {copied ? 'Código copiado' : 'Usar cupom'}
         </button>
       ) : null}
     </div>

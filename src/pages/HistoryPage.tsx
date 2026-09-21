@@ -110,19 +110,19 @@ export function HistoryPage() {
                 </div>
               </div>
 
-              <label className="bs-history__filter">
-                <span className="sr-only">Filtrar por status</span>
-                <select
-                  value={filter}
-                  onChange={(event) => setFilter(event.target.value as StatusFilter)}
-                >
-                  {FILTER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="bs-filter" role="group" aria-label="Filtrar por status">
+                {FILTER_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`bs-filter__chip${filter === option.value ? ' is-active' : ''}`}
+                    aria-pressed={filter === option.value}
+                    onClick={() => setFilter(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="bs-history__table" role="table" aria-label="Lista de prêmios">

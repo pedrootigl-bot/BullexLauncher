@@ -97,16 +97,6 @@ export function DashboardHeader() {
       </Link>
 
       <div className="bs-topbar__actions" ref={rootRef}>
-        <a
-          className="bs-topbar__icon-btn"
-          href="https://instagram.com"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Instagram"
-        >
-          <InstagramIcon />
-        </a>
-
         <div className="bs-topbar__menu">
           <button
             type="button"
@@ -206,6 +196,8 @@ export function DashboardHeader() {
             </div>
           ) : null}
         </div>
+
+        <span id="bs-topbar-burger-slot" className="bs-topbar__burger-slot" />
       </div>
     </header>
   )
@@ -215,16 +207,6 @@ function BullexMark() {
   return (
     <svg viewBox="0 0 64 64" width="28" height="28" fill="currentColor" aria-hidden="true">
       <path d="M12 22c0-6 4.4-11 10-12.4C24.4 7 28 6 32 6s7.6 1 10 3.6c5.6 1.4 10 6.4 10 12.4 0 2.8-.8 5.4-2.2 7.6L58 34l-6.4 2.4c.4 1.8.4 3.6 0 5.4L58 44l-6.2 2.4C48.4 52.8 41.2 58 32 58s-16.4-5.2-19.8-11.6L6 44l6.4-2.2c-.4-1.8-.4-3.6 0-5.4L6 34l6.2-4.4C12.8 27.4 12 24.8 12 22zm8.4 5.6c1.8 5.2 6.2 9 11.6 9s9.8-3.8 11.6-9c-1.4.8-3 1.4-4.8 1.4-2.6 0-4.8-1.4-6.8-3.2-1.8 1.8-4.2 3.2-6.8 3.2-1.8 0-3.4-.6-4.8-1.4z" />
-    </svg>
-  )
-}
-
-function InstagramIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
-      <circle cx="12" cy="12" r="4" />
-      <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
     </svg>
   )
 }

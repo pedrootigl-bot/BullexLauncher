@@ -1,16 +1,17 @@
-import { useState } from 'react'
-import type { CSSProperties } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
-  mockNextPassReward,
+  getInitiallyClaimedLevels,
+  getNextPassReward,
+  getPassRewardPoints,
   mockPassTracks,
+  resolvePassRewardState,
   seasonMissionCtas,
-  seasonMissionIcons,
   type JourneyProgress,
   type Mission,
   type PassReward,
   type PassRewardKind,
-  type PassTrack,
-  type SeasonMissionIcon,
+  type PassRewardState,
 } from '../../data/missionsMock'
 import { PremiumUpsellModal } from './PremiumUpsellModal'
 
@@ -18,170 +19,427 @@ type RewardsPassProps = {
   journey: JourneyProgress
   missions: Mission[]
   onContinue?: (mission: Mission) => void
+  onGainPoints?: (points: number) => void
 }
 
-export function RewardsPass({ journey, missions, onContinue }: RewardsPassProps) {
+const freeTrack = mockPassTracks.find((track) => track.id === 'free')
+const premiumTrack = mockPassTracks.find((track) => track.id === 'premium')
+
+const STATUS_LABEL: Record<PassRewardState | 'next', string> = {
+  claimed: 'Resgatado',
+  claimable: 'Desbloqueado',
+  locked: 'Bloqueado',
+  next: 'Próximo',
+}
+
+export function RewardsPass({
+  journey,
+  missions,
+  onContinue,
+  onGainPoints,
+}: RewardsPassProps) {
   const [premiumModal, setPremiumModal] = useState<{ rewardTitle?: string } | null>(null)
-  const [claimedFreeLevels, setClaimedFreeLevels] = useState<number[]>([])
+  const [hasPremium, setHasPremium] = useState(true)
+  const [claimedFreeLevels, setClaimedFreeLevels] = useState<number[]>(() =>
+    freeTrack ? getInitiallyClaimedLevels(freeTrack) : [],
+  )
+  const [claimedPremiumLevels, setClaimedPremiumLevels] = useState<number[]>(() =>
+    premiumTrack ? getInitiallyClaimedLevels(premiumTrack) : [],
+  )
   const [claimingLevel, setClaimingLevel] = useState<number | null>(null)
+  const [claimingAll, setClaimingAll] = useState(false)
+
   const pointsPercent =
     journey.targetPoints > 0
       ? Math.min(100, Math.round((journey.currentPoints / journey.targetPoints) * 100))
       : 0
 
-  const seasonParts = journey.seasonLabel.split('·').map((part) => part.trim())
+  const passLevels = freeTrack?.rewards.map((reward) => reward.level) ?? []
+  const nextPassReward = getNextPassReward(journey.level, { hasPremium })
+  const nearUnlock = pointsPercent >= 70
+
+  const missionsDone = useMemo(
+    () =>
+      missions.filter(
+        (mission) =>
+          mission.status === 'claimed' ||
+          (mission.target > 0 && mission.current >= mission.target),
+      ).length,
+    [missions],
+  )
+
+  const rewardsClaimed = claimedFreeLevels.length + claimedPremiumLevels.length
+
+  const claimableRewards = useMemo(() => {
+    const freeLevels: number[] = []
+    const premiumLevels: number[] = []
+    let bonusPoints = 0
+
+    for (const level of passLevels) {
+      const freeReward = freeTrack?.rewards.find((reward) => reward.level === level)
+      if (
+        freeReward &&
+        resolvePassRewardState(freeReward, journey.level, claimedFreeLevels) === 'claimable'
+      ) {
+        freeLevels.push(level)
+        bonusPoints += getPassRewardPoints(freeReward)
+      }
+
+      if (!hasPremium) continue
+
+      const premiumReward = premiumTrack?.rewards.find((reward) => reward.level === level)
+      if (
+        premiumReward &&
+        resolvePassRewardState(premiumReward, journey.level, claimedPremiumLevels) === 'claimable'
+      ) {
+        premiumLevels.push(level)
+        bonusPoints += getPassRewardPoints(premiumReward)
+      }
+    }
+
+    return {
+      freeLevels,
+      premiumLevels,
+      bonusPoints,
+      total: freeLevels.length + premiumLevels.length,
+    }
+  }, [
+    passLevels,
+    journey.level,
+    claimedFreeLevels,
+    claimedPremiumLevels,
+    hasPremium,
+  ])
 
   function openPremiumUpsell(rewardTitle?: string) {
     setPremiumModal({ rewardTitle })
   }
 
   function handleActivatePremium() {
-    // Layout/mock: aqui seguiria o fluxo Premium da corretora.
-    console.log('ativar premium na corretora')
+    setHasPremium(true)
     setPremiumModal(null)
   }
 
-  function handleClaimFree(level: number) {
-    if (claimedFreeLevels.includes(level) || claimingLevel === level) return
+  function handleClaimAll() {
+    if (claimingAll || claimingLevel !== null || claimableRewards.total === 0) return
+
+    const { freeLevels, premiumLevels, bonusPoints } = claimableRewards
+    setClaimingAll(true)
+
+    window.setTimeout(() => {
+      if (freeLevels.length > 0) {
+        setClaimedFreeLevels((current) => [...new Set([...current, ...freeLevels])])
+      }
+      if (premiumLevels.length > 0) {
+        setClaimedPremiumLevels((current) => [...new Set([...current, ...premiumLevels])])
+      }
+      setClaimingAll(false)
+      if (bonusPoints > 0) onGainPoints?.(bonusPoints)
+    }, 520)
+  }
+
+  function handleClaimAtLevel(level: number, source: 'free' | 'premium') {
+    if (claimingAll || claimingLevel === level) return
+
+    if (source === 'premium' && !hasPremium) {
+      const premiumReward = premiumTrack?.rewards.find((reward) => reward.level === level)
+      openPremiumUpsell(
+        premiumReward ? `${premiumReward.title} ${premiumReward.subtitle}` : undefined,
+      )
+      return
+    }
+
+    const freeReward = freeTrack?.rewards.find((reward) => reward.level === level)
+    const premiumReward = premiumTrack?.rewards.find((reward) => reward.level === level)
+
+    const canClaimFree =
+      !!freeReward &&
+      !claimedFreeLevels.includes(level) &&
+      resolvePassRewardState(freeReward, journey.level, claimedFreeLevels) === 'claimable'
+
+    const canClaimPremium =
+      hasPremium &&
+      !!premiumReward &&
+      !claimedPremiumLevels.includes(level) &&
+      resolvePassRewardState(premiumReward, journey.level, claimedPremiumLevels) === 'claimable'
+
+    if (!canClaimFree && !canClaimPremium) return
+
+    let bonusPoints = 0
+    if (canClaimFree && freeReward) bonusPoints += getPassRewardPoints(freeReward)
+    if (canClaimPremium && premiumReward) bonusPoints += getPassRewardPoints(premiumReward)
 
     setClaimingLevel(level)
     window.setTimeout(() => {
-      setClaimedFreeLevels((current) =>
-        current.includes(level) ? current : [...current, level],
-      )
+      if (canClaimFree) {
+        setClaimedFreeLevels((current) =>
+          current.includes(level) ? current : [...current, level],
+        )
+      }
+      if (canClaimPremium) {
+        setClaimedPremiumLevels((current) =>
+          current.includes(level) ? current : [...current, level],
+        )
+      }
       setClaimingLevel(null)
-    }, 620)
+      if (bonusPoints > 0) onGainPoints?.(bonusPoints)
+    }, 480)
   }
 
   return (
-    <section className="bs-pass" aria-labelledby="bs-pass-title">
-      <header className="bs-pass__intro">
-        <p className="bs-pass__motto">EVOLUA. OPERE. CONQUISTE.</p>
-        <h1 id="bs-pass-title">Passe de Recompensas</h1>
-        <p className="bs-pass__lead">
-          Seu progresso mensal gera grandes conquistas na Bullex.
-        </p>
+    <section className="bs-bp" aria-labelledby="bs-bp-title">
+      <header className="bs-bp__header">
+        <div className="bs-bp__header-copy">
+          <p className="bs-bp__eyebrow">Evolua · Opere · Conquiste</p>
+          <h1 id="bs-bp-title">Passe de Recompensas</h1>
+          <p className="bs-bp__lead">
+            Complete missões, acumule pontos e desbloqueie benefícios para evoluir sua experiência na
+            Bullex.
+          </p>
+        </div>
       </header>
 
-      <div className="bs-pass__board">
-        <div className="bs-pass__board-main">
-          <div className="bs-pass__status" aria-label="Progresso da temporada">
-            <article className="bs-pass-season">
-              <p>Temporada Atual</p>
-              <strong>{seasonParts[1] ?? seasonParts[0]}</strong>
-            </article>
-
-            <article className="bs-pass-level">
-              <div className="bs-pass-level__badge" aria-hidden="true">
-                <HexBadge />
-                <strong>{journey.level}</strong>
-              </div>
-
-              <div className="bs-pass-level__body">
-                <p className="bs-pass-level__label">
-                  Nível atual <span>{journey.level}</span>
-                </p>
-                <div
-                  className="bs-pass-level__bar"
-                  role="progressbar"
-                  aria-valuenow={journey.currentPoints}
-                  aria-valuemin={0}
-                  aria-valuemax={journey.targetPoints}
-                  aria-label="Progresso de pontos"
-                >
-                  <span style={{ width: `${pointsPercent}%` }} />
-                </div>
-                <div className="bs-pass-level__meta">
-                  <strong>
-                    {journey.currentPoints.toLocaleString('pt-BR')} /{' '}
-                    {journey.targetPoints.toLocaleString('pt-BR')} pontos
-                  </strong>
-                  <span>
-                    Faltam {journey.remainingPoints.toLocaleString('pt-BR')} pontos para o nível{' '}
-                    {journey.level + 1}
-                  </span>
-                </div>
-              </div>
-            </article>
-
-            <article className="bs-pass-timer">
-              <span className="bs-pass-timer__icon" aria-hidden="true">
-                <ClockIcon />
-              </span>
-              <div className="bs-pass-timer__copy">
-                <p>Tempo restante</p>
-                <strong>
-                  <em>{journey.daysLeft}</em>
-                  <span>dias</span>
-                </strong>
-                <span>até o fim da temporada</span>
-              </div>
-            </article>
+      <section className="bs-bp-progress" aria-label="Progresso do usuário">
+        <div className="bs-bp-progress__main">
+          <div className="bs-bp-progress__level">
+            <span>Nível atual</span>
+            <strong>{String(journey.level).padStart(2, '0')}</strong>
           </div>
 
-          <div className="bs-pass__tracks">
-            {mockPassTracks.map((track) => (
-              <RewardTrack
-                key={track.id}
-                track={track}
-                currentLevel={journey.level}
-                claimedFreeLevels={claimedFreeLevels}
-                claimingLevel={claimingLevel}
-                onPremiumAction={openPremiumUpsell}
-                onClaimFree={handleClaimFree}
-              />
-            ))}
+          <div className="bs-bp-progress__meter">
+            <div className="bs-bp-progress__xp">
+              <strong>
+                {journey.currentPoints.toLocaleString('pt-BR')} /{' '}
+                {journey.targetPoints.toLocaleString('pt-BR')} pontos
+              </strong>
+              <span>
+                Faltam {journey.remainingPoints.toLocaleString('pt-BR')} pontos para o nível{' '}
+                {journey.level + 1}
+              </span>
+            </div>
+            <div
+              className={`bs-bp-progress__bar${nearUnlock ? ' is-near' : ''}`}
+              role="progressbar"
+              aria-valuenow={journey.currentPoints}
+              aria-valuemin={0}
+              aria-valuemax={journey.targetPoints}
+            >
+              <span style={{ width: `${pointsPercent}%` }} />
+            </div>
+            {nextPassReward ? (
+              <p className="bs-bp-progress__next">
+                Próxima recompensa: <b>{nextPassReward.title}</b> · {nextPassReward.subtitle}
+              </p>
+            ) : null}
           </div>
         </div>
 
-        <aside className="bs-pass-next" aria-label="Próxima recompensa">
-          <div className="bs-pass-next__head">
-            <p>{journey.nextRewardLabel}</p>
-            <span>Nível {mockNextPassReward.level}</span>
+        <ul className="bs-bp-stats">
+          <li>
+            <span>Nível</span>
+            <strong>{String(journey.level).padStart(2, '0')}</strong>
+          </li>
+          <li>
+            <span>Pontos</span>
+            <strong>{journey.currentPoints.toLocaleString('pt-BR')}</strong>
+          </li>
+          <li>
+            <span>Missões</span>
+            <strong>
+              {missionsDone}/{missions.length}
+            </strong>
+          </li>
+          <li>
+            <span>Recompensas</span>
+            <strong>{rewardsClaimed}</strong>
+          </li>
+        </ul>
+      </section>
+
+      <div className="bs-bp__layout">
+        <div className="bs-bp__tracks-col">
+          <div className="bs-bp__season-mark" aria-label="Season 1">
+            <strong className="bs-bp__season-name">Season 1</strong>
+            <span className="bs-bp__season-ends">Acaba em 10 dias</span>
           </div>
 
-          <div className="bs-pass-next__visual" aria-hidden="true">
-            <ChestArt />
-          </div>
+          <section
+            className={`bs-bp-grid${hasPremium ? ' is-premium-active' : ''}`}
+            aria-label="Trilhas do passe"
+          >
+          <header className="bs-bp-grid__head">
+            <div>
+              <h2>Trilhas do passe</h2>
+              <p>Gratuita e Premium no mesmo progresso de níveis.</p>
+            </div>
+            <div className="bs-bp-grid__actions">
+              <button
+                type="button"
+                className="bs-bp-claim-all"
+                onClick={handleClaimAll}
+                disabled={claimableRewards.total === 0 || claimingAll || claimingLevel !== null}
+              >
+                {claimingAll
+                  ? 'Resgatando…'
+                  : claimableRewards.total > 0
+                    ? `Resgatar todas (${claimableRewards.total})`
+                    : 'Resgatar todas'}
+              </button>
+              {!hasPremium ? (
+                <button type="button" className="bs-bp-track__cta" onClick={() => openPremiumUpsell()}>
+                  Ativar Premium
+                </button>
+              ) : null}
+            </div>
+          </header>
 
-          <div className="bs-pass-next__copy">
-            <strong>{mockNextPassReward.title}</strong>
-            <span>{mockNextPassReward.subtitle}</span>
-          </div>
+          <div className="bs-bp-grid__scroll">
+            <div className="bs-bp-grid__levels" aria-hidden="true">
+              <span className="bs-bp-grid__lane-spacer" />
+              {passLevels.map((level, index) => (
+                <span key={level} className="bs-bp-grid__level-cell">
+                  {index > 0 ? (
+                    <i
+                      className={`bs-bp-grid__connector${level - 1 <= journey.level ? ' is-filled' : ''}`}
+                    />
+                  ) : null}
+                  <b
+                    className={`bs-bp-grid__level${level === journey.level ? ' is-current' : ''}${level <= journey.level ? ' is-reached' : ''}`}
+                  >
+                    {String(level).padStart(2, '0')}
+                  </b>
+                </span>
+              ))}
+            </div>
 
-          <div className="bs-pass-next__tags">
-            {mockNextPassReward.tags.map((tag) => (
-              <span key={tag}>{tag}</span>
-            ))}
-          </div>
+            <div className="bs-bp-grid__row is-free" role="list" aria-label="BullPass">
+              <div className="bs-bp-grid__lane">
+                <strong>BullPass</strong>
+                <span>Todo trader evolui por aqui.</span>
+              </div>
+              {passLevels.map((level) => {
+                const reward = freeTrack?.rewards.find((item) => item.level === level)
+                if (!reward) {
+                  return <div key={`free-empty-${level}`} className="bs-bp-node is-empty" />
+                }
+                const state = resolvePassRewardState(reward, journey.level, claimedFreeLevels)
+                const uiStatus: PassRewardState | 'next' =
+                  level === journey.level + 1 && state === 'locked' ? 'next' : state
+                return (
+                  <RewardCard
+                    key={`free-${level}`}
+                    reward={{ ...reward, state }}
+                    status={uiStatus}
+                    premium={false}
+                    current={level === journey.level}
+                    claiming={
+                      (claimingAll && state === 'claimable') ||
+                      (claimingLevel === level && state !== 'claimed')
+                    }
+                    onClaim={() => handleClaimAtLevel(level, 'free')}
+                  />
+                )
+              })}
+            </div>
 
-          <button type="button" className="bs-pass-next__cta">
-            Ver detalhes
-          </button>
+            <div className="bs-bp-grid__row is-premium" role="list" aria-label="BullPass Premium">
+              <div className="bs-bp-grid__lane is-premium">
+                <strong>BullPass Premium</strong>
+                <span>Benefícios adicionais.</span>
+              </div>
+              {passLevels.map((level) => {
+                const reward = premiumTrack?.rewards.find((item) => item.level === level)
+                if (!reward) {
+                  return <div key={`premium-empty-${level}`} className="bs-bp-node is-empty" />
+                }
+                const state = resolvePassRewardState(reward, journey.level, claimedPremiumLevels)
+                const uiStatus: PassRewardState | 'next' =
+                  level === journey.level + 1 && state === 'locked' ? 'next' : state
+                return (
+                  <RewardCard
+                    key={`premium-${level}`}
+                    reward={{ ...reward, state }}
+                    status={uiStatus}
+                    premium
+                    current={level === journey.level}
+                    claiming={
+                      (claimingAll && state === 'claimable') ||
+                      (claimingLevel === level && state !== 'claimed')
+                    }
+                    onClaim={() => handleClaimAtLevel(level, 'premium')}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        </section>
+        </div>
+
+        <aside className={`bs-bp-next${nearUnlock ? ' is-near' : ''}`} aria-label="Próxima recompensa">
+          {nextPassReward ? (
+            <>
+              <p className="bs-bp-next__label">Próxima recompensa</p>
+              <span className="bs-bp-next__level">Nível {String(nextPassReward.level).padStart(2, '0')}</span>
+              <div className={`bs-bp-next__icon bs-bp-next__icon--${nextPassReward.kind}`}>
+                <PassIcon kind={nextPassReward.kind} />
+              </div>
+              <strong className="bs-bp-next__title">{nextPassReward.title}</strong>
+              <em className="bs-bp-next__subtitle">{nextPassReward.subtitle}</em>
+              <p className="bs-bp-next__meta">
+                Faltam <b>{journey.remainingPoints.toLocaleString('pt-BR')} pontos</b>
+              </p>
+              <div className="bs-bp-next__bar" aria-hidden="true">
+                <span style={{ width: `${pointsPercent}%` }} />
+              </div>
+              {hasPremium && nextPassReward.premiumTitle ? (
+                <small className="bs-bp-next__premium">Premium · {nextPassReward.premiumTitle}</small>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p className="bs-bp-next__label">Passe completo</p>
+              <strong className="bs-bp-next__title">Temporada finalizada</strong>
+              <em className="bs-bp-next__subtitle">Você alcançou o último nível.</em>
+            </>
+          )}
         </aside>
       </div>
 
-      <section className="bs-pass__missions" aria-labelledby="bs-pass-missions-title">
-        <div className="bs-pass__missions-head">
-          <h2 id="bs-pass-missions-title">Missões da Temporada</h2>
-          <button type="button" className="bs-pass__missions-link">
-            Ver todas as missões
-            <ChevronIcon />
-          </button>
+      <section className="bs-bp-missions" aria-labelledby="bs-bp-missions-title">
+        <div className="bs-bp-missions__head">
+          <div>
+            <h2 id="bs-bp-missions-title">Missões da Temporada</h2>
+            <p>Essas missões alimentam os pontos do passe.</p>
+          </div>
         </div>
 
-        <div className="bs-pass__missions-grid">
+        <div className="bs-bp-missions__grid">
           {missions.map((mission) => (
             <SeasonMissionCard
               key={mission.id}
               mission={mission}
-              icon={seasonMissionIcons[mission.id] ?? 'explore'}
               ctaLabel={seasonMissionCtas[mission.id] ?? 'Continuar'}
               onContinue={onContinue}
             />
           ))}
         </div>
       </section>
+
+      <footer className="bs-bp-footer">
+        <div>
+          <h3>Como ganhar pontos?</h3>
+          <p>
+            Complete missões disponíveis durante a temporada para acumular pontos e avançar no Passe de
+            Recompensas.
+          </p>
+          <button type="button" className="bs-bp-footer__link">
+            Ver regras da temporada →
+          </button>
+        </div>
+        <Link to="/historico" className="bs-bp-footer__history">
+          Ver histórico de recompensas
+        </Link>
+      </footer>
 
       {premiumModal ? (
         <PremiumUpsellModal
@@ -194,474 +452,187 @@ export function RewardsPass({ journey, missions, onContinue }: RewardsPassProps)
   )
 }
 
-function RewardTrack({
-  track,
-  currentLevel,
-  claimedFreeLevels,
-  claimingLevel,
-  onPremiumAction,
-  onClaimFree,
-}: {
-  track: PassTrack
-  currentLevel: number
-  claimedFreeLevels: number[]
-  claimingLevel: number | null
-  onPremiumAction: (rewardTitle?: string) => void
-  onClaimFree: (level: number) => void
-}) {
-  return (
-    <div className={`bs-pass-track${track.premium ? ' is-premium' : ''}`}>
-      <div className="bs-pass-track__side">
-        <p className="bs-pass-track__eyebrow">TRILHA</p>
-        <div className="bs-pass-track__label">
-          {track.premium ? (
-            <span className="bs-pass-track__crown" aria-hidden="true">
-              <CrownIcon />
-            </span>
-          ) : null}
-          <strong>{track.label}</strong>
-        </div>
-        <span className="bs-pass-track__desc">{track.description}</span>
-
-        {track.premium ? (
-          <div className="bs-pass-track__upsell">
-            <button
-              type="button"
-              className="bs-pass-track__activate"
-              onClick={() => onPremiumAction()}
-            >
-              Ativar Premium
-            </button>
-            <p>Apenas R$ 29,90/mês</p>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="bs-pass-track__rail-wrap">
-        <div className="bs-pass-track__line" aria-hidden="true" />
-        <div className="bs-pass-track__rail" role="list">
-          {track.rewards.map((reward) => {
-            const claimed =
-              track.premium
-                ? reward.state === 'claimed'
-                : reward.state === 'claimed' || claimedFreeLevels.includes(reward.level)
-            const claiming = !track.premium && claimingLevel === reward.level
-            const resolved: PassReward = claimed
-              ? { ...reward, state: 'claimed' }
-              : reward
-
-            return (
-              <RewardNode
-                key={`${track.id}-${reward.level}`}
-                reward={resolved}
-                premium={track.premium}
-                current={reward.level === currentLevel}
-                claiming={claiming}
-                onClaim={() => {
-                  if (track.premium) {
-                    onPremiumAction(reward.title)
-                    return
-                  }
-                  onClaimFree(reward.level)
-                }}
-              />
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function RewardNode({
+function RewardCard({
   reward,
+  status,
   premium,
   current,
-  claiming = false,
+  claiming,
   onClaim,
 }: {
   reward: PassReward
+  status: PassRewardState | 'next'
   premium: boolean
   current: boolean
-  claiming?: boolean
+  claiming: boolean
   onClaim: () => void
 }) {
-  const stateClass =
-    reward.state === 'claimed'
-      ? 'is-claimed'
-      : reward.state === 'claimable'
-        ? 'is-claimable'
-        : 'is-locked'
-
   return (
     <article
-      className={`bs-pass-node ${stateClass}${current ? ' is-current' : ''}${premium ? ' is-premium' : ''}${claiming ? ' is-claiming' : ''}`}
+      className={`bs-bp-node bs-bp-node--${status}${premium ? ' is-premium' : ''}${current ? ' is-current' : ''}${claiming ? ' is-claiming' : ''}`}
       role="listitem"
     >
-      {claiming ? (
-        <span className="bs-pass-node__burst" aria-hidden="true">
-          {Array.from({ length: 8 }, (_, i) => (
-            <i key={i} style={{ '--i': i } as CSSProperties} />
-          ))}
-        </span>
-      ) : null}
+      <header>
+        <em>{STATUS_LABEL[status]}</em>
+      </header>
 
-      <span className="bs-pass-node__level">{reward.level}</span>
-
-      <div className="bs-pass-node__icon" aria-hidden="true">
-        <RewardKindIcon kind={reward.kind} />
-        {reward.state === 'claimed' || claiming ? (
-          <span className={`bs-pass-node__badge is-check${claiming ? ' is-pop' : ''}`}>
-            <CheckIcon />
-          </span>
-        ) : null}
-        {reward.state === 'locked' ? (
-          <span className="bs-pass-node__badge is-lock">
-            <LockIcon />
-          </span>
-        ) : null}
+      <div className={`bs-bp-node__icon bs-bp-node__icon--${reward.kind}`} aria-hidden="true">
+        <PassIcon kind={reward.kind} />
       </div>
 
-      <p className="bs-pass-node__title">{reward.title}</p>
+      <strong>{reward.title}</strong>
+      <p>{reward.subtitle}</p>
 
-      {reward.state === 'claimed' && !claiming ? (
-        <span className="bs-pass-node__status">Resgatado</span>
-      ) : null}
-
-      {reward.state === 'claimable' && !claiming ? (
-        <button type="button" className="bs-pass-node__claim" onClick={onClaim}>
-          Resgatar
+      {reward.state === 'claimable' ? (
+        <button type="button" onClick={onClaim} disabled={claiming}>
+          {claiming ? '…' : 'Resgatar'}
         </button>
       ) : null}
 
-      {claiming ? (
-        <span className="bs-pass-node__status is-claiming-label">Resgatando...</span>
-      ) : null}
-
-      {reward.state === 'locked' ? (
-        <span className="bs-pass-node__status is-muted">Bloqueado</span>
-      ) : null}
+      {reward.state === 'claimed' ? <span className="bs-bp-node__done">Resgatado ✓</span> : null}
     </article>
   )
 }
 
 function SeasonMissionCard({
   mission,
-  icon,
   ctaLabel,
   onContinue,
 }: {
   mission: Mission
-  icon: SeasonMissionIcon
   ctaLabel: string
   onContinue?: (mission: Mission) => void
 }) {
-  const pct =
-    mission.target > 0
-      ? Math.min(100, Math.round((mission.current / mission.target) * 100))
-      : 0
-  const isComplete = pct >= 100 || mission.status === 'claimed'
-  const isClaimed = mission.status === 'claimed'
-  const canClaim = isComplete && !isClaimed && mission.status !== 'locked'
+  const complete = mission.target > 0 && mission.current >= mission.target
+  const claimed = mission.status === 'claimed'
+  const percent =
+    mission.target > 0 ? Math.min(100, Math.round((mission.current / mission.target) * 100)) : 0
 
   const progressLabel =
-    mission.unit === 'days'
-      ? `${mission.current}/${mission.target}`
-      : `${mission.current.toLocaleString('pt-BR')} / ${mission.target.toLocaleString('pt-BR')}`
+    mission.unit === 'currency'
+      ? `${mission.current.toLocaleString('pt-BR')} / ${mission.target.toLocaleString('pt-BR')}`
+      : `${mission.current}/${mission.target}`
 
   return (
-    <article className={`bs-pass-mission${isComplete ? ' is-done' : ''}`}>
-      <div className="bs-pass-mission__top">
-        <div className="bs-pass-mission__icon" aria-hidden="true">
-          <MissionIcon kind={icon} />
-        </div>
-        <div>
-          <h3>{mission.title}</h3>
-          <p>{mission.description}</p>
-        </div>
+    <article
+      className={`bs-bp-mission${complete || claimed ? ' is-done' : ''}${claimed ? ' is-claimed' : ''}`}
+    >
+      <div className="bs-bp-mission__top">
+        <span>{mission.code}</span>
+        <em>+{mission.points} pontos</em>
       </div>
-
-      <div className="bs-pass-mission__progress">
-        <div
-          className="bs-pass-mission__bar"
-          role="progressbar"
-          aria-valuenow={pct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <span style={{ width: `${pct}%` }} />
-        </div>
-        <strong>{progressLabel}</strong>
+      <h3>{mission.title}</h3>
+      <p>{mission.description}</p>
+      <div className="bs-bp-mission__bar" aria-hidden="true">
+        <span style={{ width: `${percent}%` }} />
       </div>
-
-      <div className="bs-pass-mission__foot">
-        <span>+{mission.points} pontos</span>
+      <div className="bs-bp-mission__meta">
+        <strong>{claimed || complete ? 'Concluída' : progressLabel}</strong>
         <button
           type="button"
-          className={`bs-pass-mission__cta${isComplete ? ' is-done' : ''}`}
-          disabled={isClaimed}
+          disabled={claimed}
           onClick={() => onContinue?.(mission)}
         >
-          {isClaimed ? 'Resgatada' : canClaim || isComplete ? 'Concluída' : ctaLabel}
-          {isComplete || canClaim ? <CheckIcon small /> : null}
+          {claimed ? 'Resgatada' : complete ? 'Resgatar' : ctaLabel}
         </button>
       </div>
     </article>
   )
 }
 
-function RewardKindIcon({ kind }: { kind: PassRewardKind }) {
+function PassIcon({ kind }: { kind: PassRewardKind }) {
+  const props = {
+    viewBox: '0 0 24 24',
+    width: 22,
+    height: 22,
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.7,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  }
+
   switch (kind) {
-    case 'cashback':
     case 'balance':
-      return <CoinsIcon />
+      return (
+        <svg {...props}>
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M3 10h18" />
+          <path d="M8 15h3" />
+        </svg>
+      )
     case 'ticket':
-      return <TicketIcon />
+      return (
+        <svg {...props}>
+          <path d="M4 9.5A2.5 2.5 0 0 0 6.5 7h11A2.5 2.5 0 0 0 20 9.5v1a1.5 1.5 0 0 1 0 3v1A2.5 2.5 0 0 0 17.5 17h-11A2.5 2.5 0 0 0 4 14.5v-1a1.5 1.5 0 0 1 0-3v-1Z" />
+          <path d="M12 7v10" strokeDasharray="2 2" />
+        </svg>
+      )
+    case 'riskfree':
+      return (
+        <svg {...props}>
+          <path d="M12 3 19 6.5v5.2c0 4.4-2.9 7.5-7 8.8-4.1-1.3-7-4.4-7-8.8V6.5L12 3Z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      )
+    case 'cashback':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 8v8M9.5 10.5c.5-1 1.4-1.5 2.5-1.5s2 .6 2 1.7c0 2.3-4.5 1.2-4.5 3.6 0 1 .9 1.7 2.5 1.7s2-.5 2.4-1.3" />
+        </svg>
+      )
+    case 'xpboost':
     case 'points':
-      return <BoltIcon />
-    case 'report':
-      return <DocIcon />
-    case 'chest':
-    case 'gift':
-      return <GiftIcon />
-    case 'badge':
-      return <BadgeIcon />
+      return (
+        <svg {...props}>
+          <path d="M12 3 14.5 9.5 21.5 10.2 16 14.4 17.4 21.3 12 17.8 6.6 21.3 8 14.4 2.5 10.2 9.5 9.5 12 3Z" />
+        </svg>
+      )
     case 'bonus':
-      return <PercentIcon />
+      return (
+        <svg {...props}>
+          <path d="M8 10h8v10H8z" />
+          <path d="M7 10h10l-1-4H8l-1 4Z" />
+          <path d="M12 6V4" />
+        </svg>
+      )
+    case 'coupon':
+      return (
+        <svg {...props}>
+          <path d="M4 9.5A2.5 2.5 0 0 0 6.5 7h11A2.5 2.5 0 0 0 20 9.5v1a1.5 1.5 0 0 1 0 3v1A2.5 2.5 0 0 0 17.5 17h-11A2.5 2.5 0 0 0 4 14.5v-1a1.5 1.5 0 0 1 0-3v-1Z" />
+        </svg>
+      )
+    case 'vip':
+      return (
+        <svg {...props}>
+          <path d="M4 9 7.5 16h9L20 9l-4 2-4-5-4 5-4-2Z" />
+          <path d="M7.5 16h9v2.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V16Z" />
+        </svg>
+      )
+    case 'multiplier':
+      return (
+        <svg {...props}>
+          <path d="M13 2 6 14h5l-1 8 8-12h-5l1-8Z" />
+        </svg>
+      )
+    case 'badge':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="10" r="5.5" />
+          <path d="m9.5 15 1 6 1.5-2.5L13.5 21l1-6" />
+        </svg>
+      )
+    case 'avatar':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="8" r="3.2" />
+          <path d="M5.5 19.5c1.4-3.2 3.8-4.8 6.5-4.8s5.1 1.6 6.5 4.8" />
+        </svg>
+      )
     default: {
       const _exhaustive: never = kind
       return _exhaustive
     }
   }
-}
-
-function MissionIcon({ kind }: { kind: SeasonMissionIcon }) {
-  switch (kind) {
-    case 'deposit':
-      return <CoinsIcon />
-    case 'calendar':
-      return <CalendarIcon />
-    case 'chart':
-      return <ChartIcon />
-    case 'explore':
-      return <EyeIcon />
-    default: {
-      const _exhaustive: never = kind
-      return _exhaustive
-    }
-  }
-}
-
-function HexBadge() {
-  return (
-    <svg viewBox="0 0 64 72" width="58" height="66" aria-hidden="true">
-      <defs>
-        <linearGradient id="pass-hex-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1c2a14" />
-          <stop offset="100%" stopColor="#0a1200" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M32 2 58 17v30L32 62 6 47V17L32 2Z"
-        fill="url(#pass-hex-fill)"
-        stroke="#9eff00"
-        strokeWidth="3"
-      />
-      <path d="M32 12 48 21v22L32 52 16 43V21L32 12Z" fill="rgba(158,255,0,0.1)" />
-    </svg>
-  )
-}
-
-function ChestArt() {
-  return (
-    <svg viewBox="0 0 160 140" className="bs-pass-next__chest" aria-hidden="true">
-      <defs>
-        <linearGradient id="pass-chest-body" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1a2a12" />
-          <stop offset="100%" stopColor="#070c06" />
-        </linearGradient>
-        <linearGradient id="pass-chest-glow" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#d4ff7a" />
-          <stop offset="100%" stopColor="#9eff00" />
-        </linearGradient>
-        <filter id="pass-chest-blur" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="6" />
-        </filter>
-      </defs>
-      <ellipse
-        cx="80"
-        cy="118"
-        rx="42"
-        ry="10"
-        fill="#9eff00"
-        opacity="0.28"
-        filter="url(#pass-chest-blur)"
-      />
-      <rect
-        x="28"
-        y="58"
-        width="104"
-        height="54"
-        rx="10"
-        fill="url(#pass-chest-body)"
-        stroke="#9eff00"
-        strokeWidth="2"
-      />
-      <path d="M28 82h104" stroke="#9eff00" strokeWidth="2" />
-      <path
-        d="M46 58V46c0-18 15-32 34-32s34 14 34 32v12"
-        fill="none"
-        stroke="url(#pass-chest-glow)"
-        strokeWidth="3"
-      />
-      <circle cx="80" cy="82" r="8" fill="#0a1200" stroke="#9eff00" strokeWidth="2" />
-      <path d="M76 82h8" stroke="#9eff00" strokeWidth="2" />
-      <text
-        x="80"
-        y="42"
-        textAnchor="middle"
-        fill="#9eff00"
-        fontSize="11"
-        fontWeight="700"
-        letterSpacing="0.12em"
-      >
-        BULLEX
-      </text>
-    </svg>
-  )
-}
-
-function ClockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9">
-      <circle cx="12" cy="12" r="7.5" />
-      <path d="M12 8.2v4.2l2.8 1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function CrownIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-      <path d="M3 17 5.5 8l4 4L12 5l2.5 7 4-4L21 17H3Z" />
-      <path d="M4 19h16v2H4z" />
-    </svg>
-  )
-}
-
-function ChevronIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2">
-      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function CheckIcon({ small = false }: { small?: boolean }) {
-  const size = small ? 12 : 11
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.8">
-      <path d="m6.5 12.5 3.5 3.5 7.5-8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2">
-      <rect x="6" y="11" width="12" height="9" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </svg>
-  )
-}
-
-function CoinsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <ellipse cx="12" cy="7" rx="6.5" ry="2.4" />
-      <path d="M5.5 7v3.2c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4V7" />
-      <path d="M5.5 10.2V13.5c0 1.3 2.9 2.4 6.5 2.4s6.5-1.1 6.5-2.4v-3.3" />
-    </svg>
-  )
-}
-
-function TicketIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <path d="M4 9.5A2.5 2.5 0 0 0 6.5 7h11A2.5 2.5 0 0 0 20 9.5v1a1.5 1.5 0 0 1 0 3v1A2.5 2.5 0 0 0 17.5 17h-11A2.5 2.5 0 0 0 4 14.5v-1a1.5 1.5 0 0 1 0-3v-1Z" />
-      <path d="M12 7v10" strokeDasharray="2 2" />
-    </svg>
-  )
-}
-
-function BoltIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-      <path d="M13 2 4 14h7l-1 8 10-14h-7l0-6Z" />
-    </svg>
-  )
-}
-
-function DocIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
-      <path d="M14 3v5h5M9 13h6M9 17h6" />
-    </svg>
-  )
-}
-
-function GiftIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <rect x="4" y="10" width="16" height="10" rx="1.5" />
-      <path d="M12 10v10M4 14h16" />
-      <path d="M12 10c-2.2 0-4-1.4-4-3.2S10.2 4 12 5.5C13.8 4 16 4.6 16 6.8S14.2 10 12 10Z" />
-    </svg>
-  )
-}
-
-function BadgeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <path d="M12 3 14.5 8.5 20.5 9.2 16 13.4 17.2 19.3 12 16.4 6.8 19.3 8 13.4 3.5 9.2 9.5 8.5 12 3Z" />
-    </svg>
-  )
-}
-
-function PercentIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="m7 17 10-10" />
-      <circle cx="8.5" cy="8.5" r="1.8" />
-      <circle cx="15.5" cy="15.5" r="1.8" />
-    </svg>
-  )
-}
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <rect x="4" y="5" width="16" height="15" rx="2" />
-      <path d="M8 3v4M16 3v4M4 10h16" />
-    </svg>
-  )
-}
-
-function ChartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <path d="M4 19V5M4 19h16" />
-      <path d="M8 15v-4M12 15V8M16 15v-6" />
-    </svg>
-  )
-}
-
-function EyeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <path d="M2.5 12S6.5 6 12 6s9.5 6 9.5 6-4 6-9.5 6S2.5 12 2.5 12Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  )
 }
