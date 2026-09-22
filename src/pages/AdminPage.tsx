@@ -1,4 +1,10 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import {
+  AdminDateRangePicker,
+  chartPeriodLabel,
+  parseBrDateRange,
+  type DateRangeValue,
+} from '../components/admin/AdminDateRangePicker'
 import { AdminOverview } from '../components/admin/AdminOverview'
 import { AppSidebar } from '../components/missions/AppSidebar'
 import { DashboardHeader } from '../components/missions/DashboardHeader'
@@ -27,6 +33,12 @@ import {
   type AdminRewardRow,
 } from '../data/adminMock'
 
+const INITIAL_DATE_RANGE: DateRangeValue =
+  parseBrDateRange(adminOverview.dateRange) ?? {
+    start: new Date(2026, 8, 1),
+    end: new Date(2026, 8, 17),
+  }
+
 type AdminModalState = {
   kind: AdminCreateKind
   mode: AdminModalMode
@@ -42,10 +54,19 @@ export function AdminPage() {
   const [toast, setToast] = useState<string | null>(null)
   const [missions, setMissions] = useState<AdminMissionRow[]>(() => [...adminMissions])
   const [campaigns, setCampaigns] = useState<AdminCampaignCard[]>(() => [...adminCampaignCards])
+  const [dateRange, setDateRange] = useState<DateRangeValue>(INITIAL_DATE_RANGE)
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+
+  const periodLabel = useMemo(() => chartPeriodLabel(dateRange), [dateRange])
 
   function showToast(message: string) {
     setToast(message)
     window.setTimeout(() => setToast(null), 2400)
+  }
+
+  function handleApplyDateRange(range: DateRangeValue) {
+    setDateRange(range)
+    showToast(`Período filtrado: ${chartPeriodLabel(range).toLowerCase()}.`)
   }
 
   function openCreate(kind: AdminCreateKind) {
@@ -268,10 +289,12 @@ export function AdminPage() {
                   </article>
                 ))}
               </div>
-              <button type="button" className="bx-admin-date">
-                <CalendarIcon />
-                {adminOverview.dateRange}
-              </button>
+              <AdminDateRangePicker
+                value={dateRange}
+                open={datePickerOpen}
+                onOpenChange={setDatePickerOpen}
+                onApply={handleApplyDateRange}
+              />
             </div>
           </header>
 
@@ -306,6 +329,8 @@ export function AdminPage() {
               {section === 'overview' ? (
                 <AdminOverview
                   campaigns={campaigns}
+                  chartPeriod={periodLabel}
+                  dateRange={dateRange}
                   onOpenCampaigns={() => setSection('campaigns')}
                 />
               ) : null}
@@ -656,15 +681,6 @@ function CampaignsManage({
         ))}
       </div>
     </div>
-  )
-}
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7">
-      <rect x="3.5" y="5" width="17" height="15" rx="2" />
-      <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" />
-    </svg>
   )
 }
 

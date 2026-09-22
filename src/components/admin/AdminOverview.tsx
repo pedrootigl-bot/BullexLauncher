@@ -4,25 +4,42 @@ import {
   adminChartSeries,
   adminFeed,
   adminKpis,
-  adminOverview,
   adminProfile,
   adminRecentUsers,
   type AdminCampaignCard,
+  type AdminChartPoint,
   type AdminFeedAction,
   type AdminKpiId,
   type AdminRecentUser,
 } from '../../data/adminMock'
+import {
+  daysInRange,
+  parseBrDate,
+  type DateRangeValue,
+} from './AdminDateRangePicker'
 import { AdminUserDetailModal } from './AdminUserDetailModal'
 
 type AdminOverviewProps = {
   campaigns: AdminCampaignCard[]
+  chartPeriod: string
+  dateRange: DateRangeValue
   onOpenCampaigns: () => void
 }
 
-export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps) {
+export function AdminOverview({
+  campaigns,
+  chartPeriod,
+  dateRange,
+  onOpenCampaigns,
+}: AdminOverviewProps) {
   const [selectedUser, setSelectedUser] = useState<AdminRecentUser | null>(null)
   const [userIdQuery, setUserIdQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | AdminRecentUser['accountStatus']>('all')
+
+  const chartPoints = useMemo(() => {
+    const count = Math.min(adminChartSeries.length, daysInRange(dateRange))
+    return adminChartSeries.slice(0, Math.max(1, count))
+  }, [dateRange])
 
   const normalizedQuery = userIdQuery.trim().replace(/^#/, '').toLowerCase()
   const filteredUsers = adminRecentUsers.filter((user) => {
@@ -30,7 +47,12 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
       !normalizedQuery ||
       user.id.replace(/^#/, '').toLowerCase().includes(normalizedQuery)
     const matchesStatus = statusFilter === 'all' || user.accountStatus === statusFilter
-    return matchesId && matchesStatus
+    const registered = parseBrDate(user.registeredAt)
+    const matchesDate =
+      !registered ||
+      (registered.getTime() >= dateRange.start.getTime() &&
+        registered.getTime() <= dateRange.end.getTime())
+    return matchesId && matchesStatus && matchesDate
   })
 
   return (
@@ -58,10 +80,10 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
               <h2 id="bx-admin-chart-title">Receita e Cadastros</h2>
               <p>Depósitos e novos usuários no período.</p>
             </div>
-            <span className="bx-admin-chip">{adminOverview.chartPeriod}</span>
+            <span className="bx-admin-chip">{chartPeriod}</span>
           </div>
 
-          <RevenueChart />
+          <RevenueChart points={chartPoints} />
 
           <div className="bx-admin-chart__legend">
             <span>
@@ -238,7 +260,7 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
   )
 }
 
-function RevenueChart() {
+function RevenueChart({ points: series }: { points: AdminChartPoint[] }) {
   const width = 680
   const height = 248
   const padX = 48
@@ -246,17 +268,17 @@ function RevenueChart() {
   const padBottom = 22
 
   const totals = useMemo(() => {
-    const deposits = adminChartSeries.map((point) => point.deposits)
-    const users = adminChartSeries.map((point) => point.users)
+    const deposits = series.map((point) => point.deposits)
+    const users = series.map((point) => point.users)
     const totalDeposits = deposits.reduce((sum, value) => sum + value, 0)
     const totalUsers = users.reduce((sum, value) => sum + value, 0)
-    const avgDeposits = totalDeposits / deposits.length
-    const avgUsers = totalUsers / users.length
-    const peakDeposit = Math.max(...deposits)
-    const peakUsers = Math.max(...users)
-    const peakDepositDay = adminChartSeries.find((point) => point.deposits === peakDeposit)?.day ?? '—'
-    const first = adminChartSeries[0]
-    const last = adminChartSeries[adminChartSeries.length - 1]
+    const avgDeposits = totalDeposits / Math.max(1, deposits.length)
+    const avgUsers = totalUsers / Math.max(1, users.length)
+    const peakDeposit = Math.max(...deposits, 1)
+    const peakUsers = Math.max(...users, 1)
+    const peakDepositDay = series.find((point) => point.deposits === peakDeposit)?.day ?? '—'
+    const first = series[0]
+    const last = series[series.length - 1]
     const depositGrowth =
       first && last && first.deposits > 0
         ? ((last.deposits - first.deposits) / first.deposits) * 100
@@ -275,13 +297,13 @@ function RevenueChart() {
       depositGrowth,
       userGrowth,
     }
-  }, [])
+  }, [series])
 
-  const maxDeposit = Math.max(...adminChartSeries.map((p) => p.deposits))
-  const maxUsers = Math.max(...adminChartSeries.map((p) => p.users))
+  const maxDeposit = Math.max(...series.map((p) => p.deposits), 1)
+  const maxUsers = Math.max(...series.map((p) => p.users), 1)
   const innerW = width - padX * 2
   const innerH = height - padY - padBottom
-  const gap = innerW / adminChartSeries.length
+  const gap = innerW / Math.max(1, series.length)
   const barW = gap * 0.48
 
   const [ready, setReady] = useState(false)
@@ -290,7 +312,7 @@ function RevenueChart() {
 
   const points = useMemo(
     () =>
-      adminChartSeries.map((point, index) => {
+      series.map((point, index) => {
         const centerX = padX + gap * index + gap / 2
         const barHeight = (point.deposits / maxDeposit) * innerH
         const barX = padX + gap * index + (gap - barW) / 2
@@ -298,7 +320,7 @@ function RevenueChart() {
         const lineY = padY + innerH - (point.users / maxUsers) * innerH
         return { ...point, index, centerX, barHeight, barX, barY, lineY }
       }),
-    [barW, gap, innerH, maxDeposit, maxUsers],
+    [barW, gap, innerH, maxDeposit, maxUsers, series],
   )
 
   const peakPoint = points.find((point) => point.deposits === totals.peakDeposit) ?? null
@@ -335,7 +357,7 @@ function RevenueChart() {
       id: 'total-deposits',
       label: 'Depósitos totais',
       value: `R$ ${totals.totalDeposits.toLocaleString('pt-BR')} mil`,
-      hint: `${adminChartSeries.length} dias`,
+      hint: `${series.length} dias`,
     },
     {
       id: 'avg-deposits',

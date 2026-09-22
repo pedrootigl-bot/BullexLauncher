@@ -162,7 +162,7 @@ export const adminProfile = {
 export const adminOverview = {
   title: 'Visão Geral',
   lead: 'Acompanhe o desempenho da plataforma em tempo real.',
-  dateRange: '01/09/2025 → 17/09/2025',
+  dateRange: '01/09/2026 → 17/09/2026',
   chartPeriod: 'Últimos 17 dias',
 }
 
