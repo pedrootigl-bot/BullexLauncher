@@ -4,6 +4,9 @@ import { DashboardHeader } from '../components/missions/DashboardHeader'
 import {
   couponStatusLabel,
   couponTypeLabel,
+  formatDaysUntilLabel,
+  getCouponValidityPercent,
+  getDaysUntilIso,
   mockRewardCoupons,
   mockRewardsStats,
   type CouponStatus,
@@ -23,9 +26,14 @@ const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
 export function RewardsPage() {
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [selectedId, setSelectedId] = useState<string | null>(
-    mockRewardCoupons.find((item) => item.status === 'available')?.id ?? mockRewardCoupons[0]?.id ?? null,
+    mockRewardCoupons.find((item) => item.status === 'available')?.id ??
+      mockRewardCoupons[0]?.id ??
+      null,
   )
   const stats = mockRewardsStats
+  const recommended =
+    mockRewardCoupons.find((item) => item.status === 'available') ?? mockRewardCoupons[0]
+  const nextExpiryDays = getDaysUntilIso(stats.nextExpiryIso)
 
   const coupons = useMemo(() => {
     if (filter === 'all') return mockRewardCoupons
@@ -50,8 +58,15 @@ export function RewardsPage() {
 
   function handleFilterChange(next: StatusFilter) {
     setFilter(next)
-    const list = next === 'all' ? mockRewardCoupons : mockRewardCoupons.filter((item) => item.status === next)
+    const list =
+      next === 'all' ? mockRewardCoupons : mockRewardCoupons.filter((item) => item.status === next)
     setSelectedId(list[0]?.id ?? null)
+  }
+
+  function selectRecommended() {
+    if (!recommended) return
+    setFilter('all')
+    setSelectedId(recommended.id)
   }
 
   return (
@@ -63,6 +78,13 @@ export function RewardsPage() {
 
         <div className="bs-main bs-rewards">
           <section className="bs-rewards__hero" aria-labelledby="bs-rewards-title">
+            <img
+              className="bs-rewards__hero-bg"
+              src="/media/banners/rewards-hero.jpg"
+              alt=""
+              width={1600}
+              height={520}
+            />
             <div className="bs-rewards__hero-copy">
               <p className="bs-rewards__eyebrow">RECOMPENSAS</p>
               <h1 id="bs-rewards-title">
@@ -71,14 +93,21 @@ export function RewardsPage() {
               <p className="bs-rewards__lead">
                 Consulte validade, regras e status de cada cupom conquistado no BullStart.
               </p>
-            </div>
 
-            <div className="bs-rewards__hero-aside" aria-hidden="true">
-              <TicketArt />
-              <div className="bs-rewards__hero-quote">
-                <p>CADA MISSÃO VALE UM PRÊMIO</p>
-                <span>USE COM ESTRATÉGIA.</span>
-              </div>
+              {recommended ? (
+                <div className="bs-rewards__reco">
+                  <div className="bs-rewards__reco-copy">
+                    <em>Recomendado para você</em>
+                    <strong>{recommended.name}</strong>
+                    <span>
+                      {recommended.valueLabel} · {formatDaysUntilLabel(getDaysUntilIso(recommended.expiresAtIso))}
+                    </span>
+                  </div>
+                  <button type="button" className="bs-rewards__reco-cta" onClick={selectRecommended}>
+                    Usar agora →
+                  </button>
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -95,6 +124,7 @@ export function RewardsPage() {
                 <p>Disponíveis</p>
                 <strong>{stats.available}</strong>
               </div>
+              <i className="bs-rewards-stat__bar is-green" aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -108,6 +138,7 @@ export function RewardsPage() {
                 <p>Utilizados</p>
                 <strong>{stats.used}</strong>
               </div>
+              <i className="bs-rewards-stat__bar is-muted" aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -121,6 +152,7 @@ export function RewardsPage() {
                 <p>Expirados</p>
                 <strong>{stats.expired}</strong>
               </div>
+              <i className="bs-rewards-stat__bar is-red" aria-hidden="true" />
             </button>
             <article className="bs-rewards-stat is-static">
               <span className="bs-rewards-stat__icon is-date" aria-hidden="true">
@@ -129,6 +161,9 @@ export function RewardsPage() {
               <div>
                 <p>Próximo vencimento</p>
                 <strong>{stats.nextExpiryLabel}</strong>
+                <em className="bs-rewards-stat__countdown">
+                  {formatDaysUntilLabel(nextExpiryDays, 'em')}
+                </em>
               </div>
             </article>
           </section>
@@ -161,31 +196,51 @@ export function RewardsPage() {
 
             <div className="bs-rewards__layout">
               <div className="bs-rewards__list" role="list">
-                {coupons.map((coupon) => (
-                  <button
-                    key={coupon.id}
-                    type="button"
-                    role="listitem"
-                    className={`bs-coupon-card bs-coupon-card--${coupon.type}${selected?.id === coupon.id ? ' is-active' : ''}`}
-                    onClick={() => setSelectedId(coupon.id)}
-                  >
-                    <span className={`bs-coupon-card__badge bs-coupon-card__badge--${coupon.type}`}>
-                      <TypeIcon type={coupon.type} />
-                    </span>
-                    <span className="bs-coupon-card__body">
-                      <strong>{coupon.name}</strong>
-                      <em>{coupon.valueLabel}</em>
-                      <span className="bs-coupon-card__meta">
-                        <span>{couponTypeLabel[coupon.type]}</span>
-                        <span aria-hidden="true">·</span>
-                        <span>Vence {coupon.expiresAt}</span>
+                {coupons.map((coupon) => {
+                  const days = getDaysUntilIso(coupon.expiresAtIso)
+                  const expiryCopy =
+                    coupon.status === 'used' && coupon.usedAt
+                      ? `Utilizado em ${coupon.usedAt}`
+                      : coupon.status === 'expired'
+                        ? `Expirou em ${coupon.expiresAt}`
+                        : formatDaysUntilLabel(days)
+
+                  return (
+                    <button
+                      key={coupon.id}
+                      type="button"
+                      role="listitem"
+                      className={`bs-coupon-card bs-coupon-card--${coupon.type}${selected?.id === coupon.id ? ' is-active' : ''}`}
+                      onClick={() => setSelectedId(coupon.id)}
+                    >
+                      <span className={`bs-coupon-card__badge bs-coupon-card__badge--${coupon.type}`}>
+                        <TypeIcon type={coupon.type} />
                       </span>
-                    </span>
-                    <span className={`bs-coupon-card__status bs-coupon-card__status--${coupon.status}`}>
-                      {couponStatusLabel[coupon.status]}
-                    </span>
-                  </button>
-                ))}
+                      <span className="bs-coupon-card__body">
+                        <strong>{coupon.name}</strong>
+                        <em>{coupon.valueLabel}</em>
+                        <span className="bs-coupon-card__tags">
+                          {coupon.tags.map((tag) => (
+                            <span key={tag}>{tag}</span>
+                          ))}
+                        </span>
+                      </span>
+                      <span className="bs-coupon-card__aside">
+                        <span
+                          className={`bs-coupon-card__status bs-coupon-card__status--${coupon.status}`}
+                        >
+                          <i aria-hidden="true" />
+                          {couponStatusLabel[coupon.status]}
+                        </span>
+                        <span className="bs-coupon-card__expiry">{expiryCopy}</span>
+                        <span className="bs-coupon-card__date">{coupon.expiresAt}</span>
+                      </span>
+                      <span className="bs-coupon-card__chevron" aria-hidden="true">
+                        <ChevronIcon />
+                      </span>
+                    </button>
+                  )
+                })}
 
                 {coupons.length === 0 ? (
                   <p className="bs-rewards__empty">Nenhum cupom neste filtro.</p>
@@ -209,6 +264,8 @@ export function RewardsPage() {
 
 function CouponDetail({ coupon }: { coupon: RewardCoupon }) {
   const [copied, setCopied] = useState(false)
+  const days = getDaysUntilIso(coupon.expiresAtIso)
+  const validityPercent = getCouponValidityPercent(coupon)
 
   async function handleUseCoupon() {
     try {
@@ -231,125 +288,146 @@ function CouponDetail({ coupon }: { coupon: RewardCoupon }) {
 
   return (
     <div key={coupon.id} className={`bs-coupon-detail bs-coupon-detail--${coupon.status}`}>
-      <div className="bs-coupon-detail__head">
-        <span className={`bs-coupon-detail__type bs-coupon-detail__type--${coupon.type}`}>
-          <TypeIcon type={coupon.type} />
-          {couponTypeLabel[coupon.type]}
-        </span>
-        <span className={`bs-coupon-detail__status bs-coupon-detail__status--${coupon.status}`}>
-          {couponStatusLabel[coupon.status]}
-        </span>
+      <div className="bs-coupon-detail__media">
+        <img src={coupon.imageSrc} alt="" width={800} height={300} />
+        <div className="bs-coupon-detail__badges">
+          <span className={`bs-coupon-detail__type bs-coupon-detail__type--${coupon.type}`}>
+            {couponTypeLabel[coupon.type]}
+          </span>
+          <span className={`bs-coupon-detail__status bs-coupon-detail__status--${coupon.status}`}>
+            {couponStatusLabel[coupon.status]}
+          </span>
+        </div>
       </div>
 
-      <h3>{coupon.name}</h3>
-      <p className="bs-coupon-detail__value">{coupon.valueLabel}</p>
-      <p className="bs-coupon-detail__desc">{coupon.description}</p>
+      <div className="bs-coupon-detail__body">
+        <h3>{coupon.name}</h3>
+        <p className="bs-coupon-detail__desc">{coupon.description}</p>
 
-      <div className={`bs-coupon-detail__code${copied ? ' is-copied' : ''}`}>
-        <div>
-          <span>Código do cupom</span>
-          <strong>{coupon.code}</strong>
+        <div className="bs-coupon-detail__minis">
+          <article>
+            <span className="bs-coupon-detail__mini-icon" aria-hidden="true">
+              <TypeIcon type={coupon.type} />
+            </span>
+            <div>
+              <em>Benefício</em>
+              <strong>{coupon.valueLabel}</strong>
+            </div>
+          </article>
+          <article>
+            <span className="bs-coupon-detail__mini-icon" aria-hidden="true">
+              <WalletIcon />
+            </span>
+            <div>
+              <em>Depósito mín.</em>
+              <strong>{coupon.minDeposit ?? '—'}</strong>
+            </div>
+          </article>
+          <article>
+            <span className="bs-coupon-detail__mini-icon" aria-hidden="true">
+              <LimitIcon />
+            </span>
+            <div>
+              <em>Limite máx.</em>
+              <strong>{coupon.maxDiscount ?? '—'}</strong>
+            </div>
+          </article>
         </div>
+
+        <div className="bs-coupon-detail__validity">
+          <div className="bs-coupon-detail__validity-head">
+            <span>Período de validade</span>
+            <strong>{formatDaysUntilLabel(days)}</strong>
+          </div>
+          <div className="bs-coupon-detail__validity-bar" aria-hidden="true">
+            <i style={{ width: `${validityPercent}%` }} />
+          </div>
+          <div className="bs-coupon-detail__validity-meta">
+            <em>Emissão {coupon.issuedAt}</em>
+            <em>Até {coupon.expiresAt}</em>
+          </div>
+        </div>
+
+        <div className={`bs-coupon-detail__code${copied ? ' is-copied' : ''}`}>
+          <div>
+            <span>Código do cupom</span>
+            <strong>{coupon.code}</strong>
+          </div>
+          {coupon.status === 'available' ? (
+            <button
+              type="button"
+              className="bs-coupon-detail__copy"
+              onClick={() => {
+                void handleUseCoupon()
+              }}
+            >
+              {copied ? 'Copiado' : 'Copiar'}
+            </button>
+          ) : null}
+        </div>
+
+        <div className="bs-coupon-detail__origin">
+          <span>Origem</span>
+          <strong>{coupon.source}</strong>
+          <p>{coupon.terms}</p>
+        </div>
+
         {coupon.status === 'available' ? (
           <button
             type="button"
-            className="bs-coupon-detail__copy"
+            className={`bs-coupon-detail__cta${copied ? ' is-copied' : ''}`}
             onClick={() => {
               void handleUseCoupon()
             }}
           >
-            {copied ? 'Copiado' : 'Copiar'}
+            {copied ? 'Código copiado' : 'Usar cupom agora →'}
           </button>
         ) : null}
       </div>
-
-      <dl className="bs-coupon-detail__grid">
-        <div>
-          <dt>Data de emissão</dt>
-          <dd>{coupon.issuedAt}</dd>
-        </div>
-        <div>
-          <dt>Data de vencimento</dt>
-          <dd>{coupon.expiresAt}</dd>
-        </div>
-        <div>
-          <dt>Depósito mínimo</dt>
-          <dd>{coupon.minDeposit ?? '—'}</dd>
-        </div>
-        <div>
-          <dt>Limite máximo</dt>
-          <dd>{coupon.maxDiscount ?? '—'}</dd>
-        </div>
-        <div className="bs-coupon-detail__full">
-          <dt>Origem</dt>
-          <dd>{coupon.source}</dd>
-        </div>
-        <div className="bs-coupon-detail__full">
-          <dt>Condições</dt>
-          <dd>{coupon.terms}</dd>
-        </div>
-      </dl>
-
-      {coupon.status === 'available' ? (
-        <button
-          type="button"
-          className={`bs-coupon-detail__cta${copied ? ' is-copied' : ''}`}
-          onClick={() => {
-            void handleUseCoupon()
-          }}
-        >
-          {copied ? 'Código copiado' : 'Usar cupom'}
-        </button>
-      ) : null}
     </div>
   )
 }
 
+const COUPON_TYPE_ART: Record<CouponType, string | null> = {
+  bonus: '/media/pass-icons/bonus.png?v3',
+  cashback: '/media/pass-icons/cashback.png?v3',
+  fee: null,
+  ticket: '/media/pass-icons/ticket.png?v3',
+  riskfree: '/media/pass-icons/riskfree.png?v3',
+}
+
 function TypeIcon({ type }: { type: CouponType }) {
-  const props = {
-    viewBox: '0 0 24 24',
-    width: 16,
-    height: 16,
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.8,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
+  const art = COUPON_TYPE_ART[type]
+  if (art) {
+    return <img src={art} alt="" width={34} height={34} loading="lazy" />
   }
 
   switch (type) {
-    case 'bonus':
-      return (
-        <svg {...props}>
-          <path d="M12 3v18M8 7h5.5a2.5 2.5 0 0 1 0 5H8m0 0h6a2.5 2.5 0 0 1 0 5H8" />
-        </svg>
-      )
-    case 'cashback':
-      return (
-        <svg {...props}>
-          <circle cx="12" cy="12" r="8" />
-          <path d="M12 7v10M9.5 9.5c.8-1 2-1.5 2.5-1.5s2 .7 2 1.8-1 1.7-2.5 2.2-2.5.9-2.5 2.2 1.1 1.8 2.5 1.8 1.8-.5 2.5-1.5" />
-        </svg>
-      )
     case 'fee':
       return (
-        <svg {...props}>
-          <path d="m7 17 10-10M8.5 8.5h.01M15.5 15.5h.01" />
+        <svg
+          viewBox="0 0 24 24"
+          width={22}
+          height={22}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M7 3.8h7.2L17.8 7.4V20.2H7V3.8Z" />
+          <path d="M14.2 3.8v3.6h3.6" />
+          <path d="M9.4 15.4 14.6 10.2" />
+          <path d="M10.2 10.8h.01M13.8 14.8h.01" strokeWidth="2.6" />
+          <path d="M9.2 18h5.6" opacity="0.65" />
         </svg>
       )
+    case 'bonus':
+    case 'cashback':
     case 'ticket':
-      return (
-        <svg {...props}>
-          <path d="M4 9.5A2.5 2.5 0 0 0 6.5 7h11A2.5 2.5 0 0 0 20 9.5v1a1.5 1.5 0 0 1 0 3v1A2.5 2.5 0 0 0 17.5 17h-11A2.5 2.5 0 0 0 4 14.5v-1a1.5 1.5 0 0 1 0-3v-1Z" />
-          <path d="M12 7v10" strokeDasharray="2 2" />
-        </svg>
-      )
     case 'riskfree':
-      return (
-        <svg {...props}>
-          <path d="M12 3 5 6.5v5.2c0 4.2 2.8 7.8 7 8.8 4.2-1 7-4.6 7-8.8V6.5L12 3Z" />
-        </svg>
-      )
+      return null
     default: {
       const _exhaustive: never = type
       return _exhaustive
@@ -357,22 +435,28 @@ function TypeIcon({ type }: { type: CouponType }) {
   }
 }
 
-function TicketArt() {
+function ChevronIcon() {
   return (
-    <svg viewBox="0 0 140 100" className="bs-rewards__ticket-art" aria-hidden="true">
-      <defs>
-        <linearGradient id="rew-ticket" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#1a2618" />
-          <stop offset="100%" stopColor="#0a1200" />
-        </linearGradient>
-      </defs>
-      <rect x="12" y="18" width="116" height="64" rx="12" fill="url(#rew-ticket)" stroke="#9eff00" strokeWidth="2" />
-      <circle cx="12" cy="50" r="10" fill="#050706" />
-      <circle cx="128" cy="50" r="10" fill="#050706" />
-      <path d="M52 18v64" stroke="#9eff00" strokeWidth="2" strokeDasharray="4 5" opacity="0.7" />
-      <rect x="64" y="34" width="48" height="8" rx="2" fill="#9eff00" opacity="0.85" />
-      <rect x="64" y="50" width="36" height="6" rx="2" fill="#9eff00" opacity="0.35" />
-      <rect x="64" y="62" width="28" height="6" rx="2" fill="#9eff00" opacity="0.25" />
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function WalletIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M3 10h18M15 14h2" />
+    </svg>
+  )
+}
+
+function LimitIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M8 12h8M12 8v8" />
     </svg>
   )
 }

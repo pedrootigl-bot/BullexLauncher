@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  adminAccountStatusLabel,
   adminChartSeries,
   adminFeed,
   adminKpis,
@@ -21,13 +22,16 @@ type AdminOverviewProps = {
 export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps) {
   const [selectedUser, setSelectedUser] = useState<AdminRecentUser | null>(null)
   const [userIdQuery, setUserIdQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | AdminRecentUser['accountStatus']>('all')
 
   const normalizedQuery = userIdQuery.trim().replace(/^#/, '').toLowerCase()
-  const filteredUsers = normalizedQuery
-    ? adminRecentUsers.filter((user) =>
-        user.id.replace(/^#/, '').toLowerCase().includes(normalizedQuery),
-      )
-    : adminRecentUsers
+  const filteredUsers = adminRecentUsers.filter((user) => {
+    const matchesId =
+      !normalizedQuery ||
+      user.id.replace(/^#/, '').toLowerCase().includes(normalizedQuery)
+    const matchesStatus = statusFilter === 'all' || user.accountStatus === statusFilter
+    return matchesId && matchesStatus
+  })
 
   return (
     <div className="bx-admin-overview">
@@ -66,6 +70,9 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
             <span>
               <i className="is-line" /> Novos usuários
             </span>
+            <span>
+              <i className="is-avg" /> Média depósitos
+            </span>
           </div>
         </section>
 
@@ -85,28 +92,43 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
               <h2 id="bx-admin-users-title">Usuários Recentes</h2>
               <p>Últimos cadastros na plataforma.</p>
             </div>
-            <label className="bx-admin-search">
-              <span className="sr-only">Buscar usuário por ID</span>
-              <SearchIcon />
-              <input
-                type="search"
-                value={userIdQuery}
-                onChange={(event) => setUserIdQuery(event.target.value)}
-                placeholder="Buscar por ID"
-                autoComplete="off"
-              />
-            </label>
+            <div className="bx-admin-users-tools">
+              <label className="bx-admin-search">
+                <span className="sr-only">Buscar usuário por ID</span>
+                <SearchIcon />
+                <input
+                  type="search"
+                  value={userIdQuery}
+                  onChange={(event) => setUserIdQuery(event.target.value)}
+                  placeholder="Buscar por ID"
+                  autoComplete="off"
+                />
+              </label>
+              <select
+                className="bx-admin-filter"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as 'all' | AdminRecentUser['accountStatus'])
+                }
+                aria-label="Filtrar por status"
+              >
+                <option value="all">Todos status</option>
+                <option value="active">Ativo</option>
+                <option value="pending">Pendente</option>
+                <option value="blocked">Bloqueado</option>
+              </select>
+            </div>
           </div>
 
           <div className="bx-admin-table bx-admin-table--users" role="table">
             <div className="bx-admin-table__head" role="row">
               <span role="columnheader">ID</span>
               <span role="columnheader">Nome</span>
-              <span role="columnheader">E-mail</span>
-              <span role="columnheader">Cadastro</span>
+              <span role="columnheader">Última ação</span>
+              <span role="columnheader">Status</span>
             </div>
             {filteredUsers.length === 0 ? (
-              <p className="bx-admin-empty">Nenhum usuário encontrado para este ID.</p>
+              <p className="bx-admin-empty">Nenhum usuário encontrado com esses filtros.</p>
             ) : null}
             {filteredUsers.map((user) => (
               <div key={user.id} className="bx-admin-table__row" role="row">
@@ -121,8 +143,12 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
                     {user.name}
                   </button>
                 </span>
-                <span role="cell">{user.email}</span>
-                <span role="cell">{user.registeredAt}</span>
+                <span role="cell">{user.lastAction}</span>
+                <span role="cell">
+                  <em className={`bx-admin-badge bx-admin-badge--${user.accountStatus}`}>
+                    {adminAccountStatusLabel[user.accountStatus]}
+                  </em>
+                </span>
               </div>
             ))}
           </div>
@@ -163,19 +189,22 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
       <section className="bx-admin-campaigns" aria-labelledby="bx-admin-campaigns-title">
         <div className="bx-admin-panel__head">
           <div>
-            <h2 id="bx-admin-campaigns-title">Campanhas em Andamento</h2>
-            <p>Progresso dos sorteios e ofertas ativas.</p>
+            <h2 id="bx-admin-campaigns-title">Campanhas ativas</h2>
+            <p>Progresso dos sorteios, banners e ofertas da temporada.</p>
           </div>
           <button type="button" className="bx-admin-link" onClick={onOpenCampaigns}>
-            Ver todas
+            Gerenciar
           </button>
         </div>
 
         <div className="bx-admin-campaigns__grid">
-          {campaigns.map((campaign) => (
+          {campaigns
+            .slice()
+            .sort((a, b) => a.priority - b.priority)
+            .map((campaign) => (
             <article key={campaign.id} className="bx-admin-campaign">
               <div className="bx-admin-campaign__media">
-                <img src={campaign.image} alt="" />
+                <img src={campaign.image} alt={campaign.altText} />
                 <span
                   className={`bx-admin-badge bx-admin-badge--${
                     campaign.status === 'active' ? 'active' : 'paused'
@@ -183,14 +212,19 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
                 >
                   {campaign.status === 'active' ? 'Ativa' : 'Pausada'}
                 </span>
+                <span className="bx-admin-campaign__order">#{campaign.priority}</span>
               </div>
               <div className="bx-admin-campaign__body">
                 <strong>{campaign.title}</strong>
-                <em>até {campaign.endsAt}</em>
-                <div className="bx-admin-campaign__progress">
+                <div className="bx-admin-campaign__meta">
+                  <span>
+                    {campaign.startsAt} → {campaign.endsAt}
+                  </span>
+                  <b>{campaign.progress}%</b>
+                </div>
+                <div className="bx-admin-campaign__progress" aria-hidden="true">
                   <span style={{ width: `${campaign.progress}%` }} />
                 </div>
-                <p>{campaign.progress}% concluída</p>
               </div>
             </article>
           ))}
@@ -205,76 +239,268 @@ export function AdminOverview({ campaigns, onOpenCampaigns }: AdminOverviewProps
 }
 
 function RevenueChart() {
-  const width = 640
-  const height = 220
-  const padX = 28
-  const padY = 24
+  const width = 680
+  const height = 248
+  const padX = 48
+  const padY = 28
+  const padBottom = 22
+
+  const totals = useMemo(() => {
+    const deposits = adminChartSeries.map((point) => point.deposits)
+    const users = adminChartSeries.map((point) => point.users)
+    const totalDeposits = deposits.reduce((sum, value) => sum + value, 0)
+    const totalUsers = users.reduce((sum, value) => sum + value, 0)
+    const avgDeposits = totalDeposits / deposits.length
+    const avgUsers = totalUsers / users.length
+    const peakDeposit = Math.max(...deposits)
+    const peakUsers = Math.max(...users)
+    const peakDepositDay = adminChartSeries.find((point) => point.deposits === peakDeposit)?.day ?? '—'
+    const first = adminChartSeries[0]
+    const last = adminChartSeries[adminChartSeries.length - 1]
+    const depositGrowth =
+      first && last && first.deposits > 0
+        ? ((last.deposits - first.deposits) / first.deposits) * 100
+        : 0
+    const userGrowth =
+      first && last && first.users > 0 ? ((last.users - first.users) / first.users) * 100 : 0
+
+    return {
+      totalDeposits,
+      totalUsers,
+      avgDeposits,
+      avgUsers,
+      peakDeposit,
+      peakUsers,
+      peakDepositDay,
+      depositGrowth,
+      userGrowth,
+    }
+  }, [])
+
   const maxDeposit = Math.max(...adminChartSeries.map((p) => p.deposits))
   const maxUsers = Math.max(...adminChartSeries.map((p) => p.users))
   const innerW = width - padX * 2
-  const innerH = height - padY * 2
+  const innerH = height - padY - padBottom
   const gap = innerW / adminChartSeries.length
   const barW = gap * 0.48
 
-  const linePoints = adminChartSeries
-    .map((point, index) => {
-      const x = padX + gap * index + gap / 2
-      const y = padY + innerH - (point.users / maxUsers) * innerH
-      return `${x},${y}`
-    })
-    .join(' ')
+  const [ready, setReady] = useState(false)
+  const [hovered, setHovered] = useState<number | null>(null)
+  const lineRef = useRef<SVGPolylineElement | null>(null)
+
+  const points = useMemo(
+    () =>
+      adminChartSeries.map((point, index) => {
+        const centerX = padX + gap * index + gap / 2
+        const barHeight = (point.deposits / maxDeposit) * innerH
+        const barX = padX + gap * index + (gap - barW) / 2
+        const barY = padY + innerH - barHeight
+        const lineY = padY + innerH - (point.users / maxUsers) * innerH
+        return { ...point, index, centerX, barHeight, barX, barY, lineY }
+      }),
+    [barW, gap, innerH, maxDeposit, maxUsers],
+  )
+
+  const peakPoint = points.find((point) => point.deposits === totals.peakDeposit) ?? null
+  const avgDepositY = padY + innerH - (totals.avgDeposits / maxDeposit) * innerH
+  const yTicks = [0, 0.25, 0.5, 0.75, 1]
+
+  const linePoints = points.map((point) => `${point.centerX},${point.lineY}`).join(' ')
+  const active = hovered !== null ? points[hovered] : null
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setReady(true))
+    return () => window.cancelAnimationFrame(frame)
+  }, [])
+
+  useEffect(() => {
+    const line = lineRef.current
+    if (!line) return
+
+    const length = line.getTotalLength()
+    line.style.strokeDasharray = `${length}`
+    line.style.strokeDashoffset = ready ? '0' : `${length}`
+  }, [ready, linePoints])
+
+  const tooltipStyle =
+    active != null
+      ? {
+          left: `${(active.centerX / width) * 100}%`,
+          top: `${(Math.min(active.barY, active.lineY) / height) * 100}%`,
+        }
+      : undefined
+
+  const metrics = [
+    {
+      id: 'total-deposits',
+      label: 'Depósitos totais',
+      value: `R$ ${totals.totalDeposits.toLocaleString('pt-BR')} mil`,
+      hint: `${adminChartSeries.length} dias`,
+    },
+    {
+      id: 'avg-deposits',
+      label: 'Média diária',
+      value: `R$ ${totals.avgDeposits.toFixed(0)} mil`,
+      hint: `${totals.depositGrowth >= 0 ? '+' : ''}${totals.depositGrowth.toFixed(1)}% no período`,
+    },
+    {
+      id: 'peak',
+      label: 'Pico de depósitos',
+      value: `R$ ${totals.peakDeposit.toLocaleString('pt-BR')} mil`,
+      hint: `Dia ${totals.peakDepositDay}`,
+    },
+    {
+      id: 'users',
+      label: 'Novos usuários',
+      value: totals.totalUsers.toLocaleString('pt-BR'),
+      hint: `Média ${totals.avgUsers.toFixed(0)}/dia · ${totals.userGrowth >= 0 ? '+' : ''}${totals.userGrowth.toFixed(1)}%`,
+    },
+  ]
 
   return (
-    <div className="bx-admin-chart__canvas">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Gráfico de depósitos e cadastros">
-        {[0.25, 0.5, 0.75, 1].map((ratio) => {
-          const y = padY + innerH * (1 - ratio)
-          return (
-            <line
-              key={ratio}
-              x1={padX}
-              x2={width - padX}
-              y1={y}
-              y2={y}
-              className="bx-admin-chart__grid"
-            />
-          )
-        })}
+    <div className="bx-admin-chart__body">
+      <div className="bx-admin-chart__metrics" aria-label="Métricas do gráfico">
+        {metrics.map((metric) => (
+          <article key={metric.id} className="bx-admin-chart__metric">
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+            <em>{metric.hint}</em>
+          </article>
+        ))}
+      </div>
 
-        {adminChartSeries.map((point, index) => {
-          const x = padX + gap * index + (gap - barW) / 2
-          const h = (point.deposits / maxDeposit) * innerH
-          const y = padY + innerH - h
-          return (
+      <div
+        className={`bx-admin-chart__canvas${ready ? ' is-ready' : ''}`}
+        onMouseLeave={() => setHovered(null)}
+      >
+        <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Gráfico de depósitos e cadastros">
+          {yTicks.map((ratio) => {
+            const y = padY + innerH * (1 - ratio)
+            const depositLabel = Math.round(maxDeposit * ratio)
+            return (
+              <g key={ratio}>
+                <line
+                  x1={padX}
+                  x2={width - padX}
+                  y1={y}
+                  y2={y}
+                  className="bx-admin-chart__grid"
+                />
+                <text x={padX - 8} y={y + 3} className="bx-admin-chart__axis">
+                  {depositLabel}
+                </text>
+              </g>
+            )
+          })}
+
+          <line
+            x1={padX}
+            x2={width - padX}
+            y1={avgDepositY}
+            y2={avgDepositY}
+            className="bx-admin-chart__avg"
+          />
+          <text x={width - padX + 2} y={avgDepositY + 3} className="bx-admin-chart__avg-label">
+            média
+          </text>
+
+          {points.map((point) => (
             <rect
-              key={point.day}
-              x={x}
-              y={y}
+              key={`bar-${point.day}`}
+              x={point.barX}
+              y={point.barY}
               width={barW}
-              height={h}
+              height={point.barHeight}
               rx={4}
-              className="bx-admin-chart__bar"
+              className={`bx-admin-chart__bar${hovered === point.index ? ' is-active' : ''}${
+                peakPoint?.index === point.index ? ' is-peak' : ''
+              }`}
+              style={{ animationDelay: `${point.index * 35}ms` }}
             />
-          )
-        })}
+          ))}
 
-        <polyline points={linePoints} className="bx-admin-chart__line" />
+          <polyline ref={lineRef} points={linePoints} className="bx-admin-chart__line" />
 
-        {adminChartSeries.map((point, index) => {
-          const x = padX + gap * index + gap / 2
-          const y = padY + innerH - (point.users / maxUsers) * innerH
-          return <circle key={`dot-${point.day}`} cx={x} cy={y} r={3.2} className="bx-admin-chart__dot" />
-        })}
+          {points.map((point) => (
+            <circle
+              key={`dot-${point.day}`}
+              cx={point.centerX}
+              cy={point.lineY}
+              r={hovered === point.index ? 4.4 : 3.2}
+              className={`bx-admin-chart__dot${hovered === point.index ? ' is-active' : ''}`}
+              style={{ animationDelay: `${180 + point.index * 35}ms` }}
+            />
+          ))}
 
-        {adminChartSeries.map((point, index) => {
-          const x = padX + gap * index + gap / 2
-          return (
-            <text key={`label-${point.day}`} x={x} y={height - 6} className="bx-admin-chart__label">
+          {peakPoint ? (
+            <g className="bx-admin-chart__peak" aria-hidden="true">
+              <line
+                x1={peakPoint.centerX}
+                x2={peakPoint.centerX}
+                y1={peakPoint.barY - 14}
+                y2={peakPoint.barY - 4}
+                className="bx-admin-chart__peak-stem"
+              />
+              <circle cx={peakPoint.centerX} cy={peakPoint.barY - 16} r={3} className="bx-admin-chart__peak-dot" />
+              <text x={peakPoint.centerX} y={peakPoint.barY - 22} className="bx-admin-chart__peak-label">
+                pico
+              </text>
+            </g>
+          ) : null}
+
+          {points.map((point) => (
+            <text
+              key={`label-${point.day}`}
+              x={point.centerX}
+              y={height - 6}
+              className={`bx-admin-chart__label${hovered === point.index ? ' is-active' : ''}`}
+            >
               {point.day}
             </text>
-          )
-        })}
-      </svg>
+          ))}
+
+          {points.map((point) => (
+            <rect
+              key={`hit-${point.day}`}
+              x={padX + gap * point.index}
+              y={padY}
+              width={gap}
+              height={innerH}
+              className="bx-admin-chart__hit"
+              onMouseEnter={() => setHovered(point.index)}
+            />
+          ))}
+
+          {active ? (
+            <line
+              x1={active.centerX}
+              x2={active.centerX}
+              y1={padY}
+              y2={padY + innerH}
+              className="bx-admin-chart__guide"
+            />
+          ) : null}
+        </svg>
+
+        {active ? (
+          <div className="bx-admin-chart__tooltip" style={tooltipStyle} role="status">
+            <strong>Dia {active.day}</strong>
+            <span>
+              Depósitos <b>R$ {active.deposits.toLocaleString('pt-BR')} mil</b>
+            </span>
+            <span>
+              vs média{' '}
+              <b>
+                {active.deposits >= totals.avgDeposits ? '+' : ''}
+                {(active.deposits - totals.avgDeposits).toFixed(0)} mil
+              </b>
+            </span>
+            <span>
+              Novos usuários <b>{active.users}</b>
+            </span>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

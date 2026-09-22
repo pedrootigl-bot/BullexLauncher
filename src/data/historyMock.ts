@@ -20,6 +20,20 @@ export type HistoryStats = {
   lastClaimItem: string
   prizesCount: number
   claimedPercent: number
+  topPrizeLabel: string
+  topPrizeImage: string
+  numbers: {
+    totalValue: string
+    prizesLabel: string
+    claimRate: string
+    highlight: string
+  }
+}
+
+export const historyStatusLabel: Record<HistoryStatus, string> = {
+  used: 'Utilizado',
+  shipped: 'Enviado',
+  delivered: 'Entregue',
 }
 
 export const mockHistoryStats: HistoryStats = {
@@ -29,6 +43,14 @@ export const mockHistoryStats: HistoryStats = {
   lastClaimItem: 'PS5 PRO BUNDLE GTA 6',
   prizesCount: 6,
   claimedPercent: 100,
+  topPrizeLabel: 'PS5 Pro Bundle',
+  topPrizeImage: '/media/banners/ps5-pro-gta6.jpg',
+  numbers: {
+    totalValue: 'US$ 8.490',
+    prizesLabel: '6 prêmios',
+    claimRate: '100% reivindicados',
+    highlight: 'Maior prêmio: PS5 Pro Bundle',
+  },
 }
 
 export const mockHistoryPrizes: HistoryPrize[] = [
@@ -84,10 +106,10 @@ export const mockHistoryPrizes: HistoryPrize[] = [
     id: 'bonus-150',
     title: '150% de Bônus',
     description: 'Bônus de depósito resgatado.',
-    imageSrc: '/media/missions/mission-02.jpg',
+    imageSrc: '/media/coupons/coupon-bonus.jpg?v2',
     category: 'Bônus',
     subcategory: 'DEPÓSITO',
-    categoryIcon: 'shield',
+    categoryIcon: 'coins',
     date: '22/07/2026',
     time: '13:20',
     status: 'used',
@@ -101,13 +123,12 @@ export const mockHistoryPrizes: HistoryPrize[] = [
     subcategory: 'TICKET',
     categoryIcon: 'ticket',
     date: '10/07/2026',
-    time: '20:08',
+    time: '20:05',
     status: 'used',
   },
 ]
 
-export const historyStatusLabel: Record<HistoryStatus, string> = {
-  used: 'Utilizado',
-  shipped: 'Enviado',
-  delivered: 'Entregue',
+export const historyQuote = {
+  text: 'Cada operação te aproxima de novas conquistas.',
+  brand: 'BULLEX',
 }

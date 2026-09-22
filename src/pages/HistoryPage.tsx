@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  historyQuote,
   historyStatusLabel,
   mockHistoryPrizes,
   mockHistoryStats,
@@ -20,12 +21,37 @@ const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
 
 export function HistoryPage() {
   const [filter, setFilter] = useState<StatusFilter>('all')
+  const [selectedId, setSelectedId] = useState(
+    mockHistoryPrizes.find((item) => item.status === 'delivered')?.id ?? mockHistoryPrizes[0]?.id ?? '',
+  )
+  const [toast, setToast] = useState<string | null>(null)
   const stats = mockHistoryStats
 
   const prizes = useMemo(() => {
     if (filter === 'all') return mockHistoryPrizes
     return mockHistoryPrizes.filter((item) => item.status === filter)
   }, [filter])
+
+  const filterCounts = useMemo(
+    () => ({
+      all: mockHistoryPrizes.length,
+      used: mockHistoryPrizes.filter((item) => item.status === 'used').length,
+      shipped: mockHistoryPrizes.filter((item) => item.status === 'shipped').length,
+      delivered: mockHistoryPrizes.filter((item) => item.status === 'delivered').length,
+    }),
+    [],
+  )
+
+  const selected =
+    prizes.find((item) => item.id === selectedId) ??
+    mockHistoryPrizes.find((item) => item.id === selectedId) ??
+    prizes[0] ??
+    null
+
+  function handleExport() {
+    setToast('Histórico exportado (mock).')
+    window.setTimeout(() => setToast(null), 2200)
+  }
 
   return (
     <div className="bs-shell">
@@ -36,6 +62,13 @@ export function HistoryPage() {
 
         <div className="bs-main bs-history">
           <section className="bs-history__hero" aria-labelledby="bs-history-title">
+            <img
+              className="bs-history__hero-bg"
+              src="/media/banners/history-hero.jpg"
+              alt=""
+              width={1600}
+              height={520}
+            />
             <div className="bs-history__hero-copy">
               <p className="bs-history__eyebrow">HISTÓRICO</p>
               <h1 id="bs-history-title">
@@ -44,12 +77,8 @@ export function HistoryPage() {
               <p className="bs-history__lead">
                 Acompanhe cada resgate, entrega e crédito aplicado na sua jornada BullStart.
               </p>
-            </div>
-
-            <div className="bs-history__hero-aside" aria-hidden="true">
-              <TrophyArt />
               <div className="bs-history__hero-quote">
-                <p>DISCIPLINA TAMBÉM RENDE PRÊMIOS</p>
+                <p>DISCIPLINA TAMBÉM RENDE PRÊMIOS.</p>
                 <span>BULLEX TRADERS VENCEM MAIS.</span>
               </div>
             </div>
@@ -88,7 +117,7 @@ export function HistoryPage() {
                 <BadgeIcon />
               </span>
               <div>
-                <p>Status</p>
+                <p>Status geral</p>
                 <strong>{stats.prizesCount} prêmios</strong>
                 <span>{stats.claimedPercent}% REIVINDICADOS</span>
               </div>
@@ -96,18 +125,37 @@ export function HistoryPage() {
                 <MiniChartIcon />
               </span>
             </article>
+
+            <article className="bs-history-stat">
+              <span className="bs-history-stat__icon" aria-hidden="true">
+                <MedalIcon />
+              </span>
+              <div>
+                <p>Maior prêmio</p>
+                <strong>{stats.topPrizeLabel}</strong>
+              </div>
+              <span className="bs-history-stat__chart" aria-hidden="true">
+                <MiniChartIcon />
+              </span>
+            </article>
           </section>
 
-          <section className="bs-history__panel" aria-labelledby="bs-history-list-title">
-            <div className="bs-history__panel-head">
-              <div className="bs-history__panel-title">
-                <span className="bs-history__panel-icon" aria-hidden="true">
-                  <StackIcon />
-                </span>
-                <div>
-                  <h2 id="bs-history-list-title">Meu histórico de prêmios</h2>
-                  <p>Todos os itens resgatados, enviados e creditados na sua conta.</p>
+          <div className="bs-history__body">
+            <section className="bs-history__panel" aria-labelledby="bs-history-list-title">
+              <div className="bs-history__panel-head">
+                <div className="bs-history__panel-title">
+                  <span className="bs-history__panel-icon" aria-hidden="true">
+                    <StackIcon />
+                  </span>
+                  <div>
+                    <h2 id="bs-history-list-title">Meu histórico de prêmios</h2>
+                    <p>Todos os itens resgatados, enviados e creditados na sua conta.</p>
+                  </div>
                 </div>
+
+                <button type="button" className="bs-history__export" onClick={handleExport}>
+                  Exportar histórico
+                </button>
               </div>
 
               <div className="bs-filter" role="group" aria-label="Filtrar por status">
@@ -117,48 +165,135 @@ export function HistoryPage() {
                     type="button"
                     className={`bs-filter__chip${filter === option.value ? ' is-active' : ''}`}
                     aria-pressed={filter === option.value}
-                    onClick={() => setFilter(option.value)}
+                    onClick={() => {
+                      setFilter(option.value)
+                      const list =
+                        option.value === 'all'
+                          ? mockHistoryPrizes
+                          : mockHistoryPrizes.filter((item) => item.status === option.value)
+                      setSelectedId(list[0]?.id ?? '')
+                    }}
                   >
                     {option.label}
+                    <em>{filterCounts[option.value]}</em>
                   </button>
                 ))}
               </div>
-            </div>
 
-            <div className="bs-history__table" role="table" aria-label="Lista de prêmios">
-              <div className="bs-history__thead" role="row">
-                <span role="columnheader">PRÊMIO</span>
-                <span role="columnheader">CATEGORIA</span>
-                <span role="columnheader">DATA</span>
-                <span role="columnheader">STATUS</span>
-                <span role="columnheader" className="sr-only">
-                  Detalhes
-                </span>
+              <div className="bs-history__table" role="table" aria-label="Lista de prêmios">
+                <div className="bs-history__thead" role="row">
+                  <span role="columnheader">PRÊMIO</span>
+                  <span role="columnheader">CATEGORIA</span>
+                  <span role="columnheader">DATA</span>
+                  <span role="columnheader">STATUS</span>
+                  <span role="columnheader" className="sr-only">
+                    Detalhes
+                  </span>
+                </div>
+
+                {prizes.map((prize) => (
+                  <HistoryRow
+                    key={prize.id}
+                    prize={prize}
+                    active={selected?.id === prize.id}
+                    onSelect={() => setSelectedId(prize.id)}
+                  />
+                ))}
+
+                {prizes.length === 0 ? (
+                  <p className="bs-history__empty">Nenhum prêmio neste status.</p>
+                ) : null}
               </div>
+            </section>
 
-              {prizes.map((prize) => (
-                <HistoryRow key={prize.id} prize={prize} />
-              ))}
-
-              {prizes.length === 0 ? (
-                <p className="bs-history__empty">Nenhum prêmio neste status.</p>
+            <aside className="bs-history__rail" aria-label="Resumo lateral">
+              {selected ? (
+                <article className="bs-history-feature">
+                  <div className="bs-history-feature__media">
+                    <img src={selected.imageSrc} alt="" />
+                    <span
+                      className={`bs-history-feature__badge bs-history-feature__badge--${selected.status}`}
+                    >
+                      {historyStatusLabel[selected.status]}
+                    </span>
+                  </div>
+                  <div className="bs-history-feature__body">
+                    <p>Último resgate</p>
+                    <strong>{selected.title}</strong>
+                    <em>
+                      {selected.date} · {selected.time}
+                    </em>
+                    <button type="button" className="bs-history-feature__link">
+                      Ver detalhes →
+                    </button>
+                  </div>
+                </article>
               ) : null}
-            </div>
-          </section>
 
-          <footer className="bs-history__footer">
-            <p>CONQUISTAS HOJE. LIBERDADE SEMPRE.</p>
-            <span>//// BULLEX</span>
-          </footer>
+              <article className="bs-history-numbers">
+                <h3>Seus números</h3>
+                <ul>
+                  <li>
+                    <GiftIcon />
+                    <span>Total</span>
+                    <strong>{stats.numbers.totalValue}</strong>
+                  </li>
+                  <li>
+                    <StackIcon />
+                    <span>Prêmios</span>
+                    <strong>{stats.numbers.prizesLabel}</strong>
+                  </li>
+                  <li>
+                    <BadgeIcon />
+                    <span>Taxa</span>
+                    <strong>{stats.numbers.claimRate}</strong>
+                  </li>
+                  <li>
+                    <MedalIcon />
+                    <span>Destaque</span>
+                    <strong>{stats.numbers.highlight}</strong>
+                  </li>
+                </ul>
+                <div className="bs-history-numbers__chart" aria-hidden="true">
+                  <MiniChartIcon />
+                </div>
+              </article>
+
+              <blockquote className="bs-history-quote">
+                <span aria-hidden="true">“</span>
+                <p>{historyQuote.text}</p>
+                <strong>{historyQuote.brand}</strong>
+              </blockquote>
+            </aside>
+          </div>
+
+          {toast ? (
+            <div className="bs-history__toast" role="status">
+              {toast}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
   )
 }
 
-function HistoryRow({ prize }: { prize: HistoryPrize }) {
+function HistoryRow({
+  prize,
+  active,
+  onSelect,
+}: {
+  prize: HistoryPrize
+  active: boolean
+  onSelect: () => void
+}) {
   return (
-    <button type="button" className="bs-history__row" role="row">
+    <button
+      type="button"
+      className={`bs-history__row${active ? ' is-active' : ''}`}
+      role="row"
+      onClick={onSelect}
+    >
       <span className="bs-history__prize" role="cell">
         <img src={prize.imageSrc} alt="" />
         <span>
@@ -199,31 +334,6 @@ function HistoryRow({ prize }: { prize: HistoryPrize }) {
   )
 }
 
-function TrophyArt() {
-  return (
-    <svg viewBox="0 0 120 140" className="bs-history__trophy" aria-hidden="true">
-      <defs>
-        <linearGradient id="hist-trophy" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#2a3a26" />
-          <stop offset="55%" stopColor="#121a11" />
-          <stop offset="100%" stopColor="#070a08" />
-        </linearGradient>
-        <linearGradient id="hist-trophy-metal" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#d4ff7a" />
-          <stop offset="100%" stopColor="#5cad00" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="60" cy="128" rx="28" ry="6" fill="#9eff00" opacity="0.2" />
-      <path d="M38 18h44v34c0 16-10 28-22 28S38 68 38 52V18Z" fill="url(#hist-trophy)" />
-      <path d="M38 24H26a16 16 0 0 0 16 22M82 24h12a16 16 0 0 1-16 22" stroke="url(#hist-trophy-metal)" strokeWidth="4" fill="none" />
-      <rect x="52" y="80" width="16" height="18" rx="2" fill="url(#hist-trophy-metal)" />
-      <rect x="42" y="98" width="36" height="12" rx="3" fill="url(#hist-trophy)" />
-      <circle cx="60" cy="48" r="12" fill="#0a1200" stroke="#9eff00" strokeWidth="2" />
-      <path d="M54 48c2-4 5-6 6-6s4 2 6 6c-2 1-4 2-6 2s-4-1-6-2Z" fill="#9eff00" />
-    </svg>
-  )
-}
-
 function GiftIcon() {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
@@ -247,6 +357,15 @@ function BadgeIcon() {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
       <path d="M12 3 14.5 8.5 20.5 9.2 16 13.4 17.2 19.3 12 16.4 6.8 19.3 8 13.4 3.5 9.2 9.5 8.5 12 3Z" />
+    </svg>
+  )
+}
+
+function MedalIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <circle cx="12" cy="14" r="5" />
+      <path d="M9 4h6l-1.5 5h-3L9 4Z" />
     </svg>
   )
 }

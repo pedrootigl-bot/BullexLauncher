@@ -25,8 +25,6 @@ function useIsMobile() {
 
 function isNavActive(pathname: string, id: (typeof navItems)[number]['id']) {
   switch (id) {
-    case 'inicio':
-      return pathname === '/inicio'
     case 'bullstart':
       return pathname.startsWith('/missoes')
     case 'recompensas':
@@ -216,12 +214,6 @@ function NavIcon({ id }: { id: (typeof navItems)[number]['id'] }) {
   }
 
   switch (id) {
-    case 'inicio':
-      return (
-        <svg {...props}>
-          <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z" />
-        </svg>
-      )
     case 'bullstart':
       return (
         <svg {...props}>

@@ -1802,10 +1802,35 @@ html.bs-sidebar-collapsed .bs-shell__body {
 }
 
 .bs-history__hero {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(16rem, 0.8fr);
-  gap: 1.25rem;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: end;
+  min-height: 250px;
+  padding: 1.6rem 1.5rem 1.45rem;
+  border-radius: 24px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #070a07;
+  border: 1px solid rgba(158, 255, 0, 0.14);
+}
+
+.bs-history__hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center right;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bs-history__hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: min(36rem, 100%);
 }
 
 .bs-history__eyebrow {
@@ -1878,7 +1903,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
 
 .bs-history__stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.85rem;
 }
 
@@ -4877,18 +4902,35 @@ html.bs-sidebar-collapsed .bs-shell__body {
 }
 
 .bs-rewards__hero {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(200px, 0.65fr);
-  gap: 1.25rem;
-  align-items: center;
-  padding: 1.4rem 1.45rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: end;
+  min-height: 260px;
+  padding: 1.5rem 1.45rem 1.4rem;
   border-radius: 24px;
-  background:
-    radial-gradient(ellipse 55% 80% at 88% 18%, rgba(158, 255, 0, 0.14), transparent 58%),
-    radial-gradient(ellipse 40% 60% at 8% 90%, rgba(158, 255, 0, 0.05), transparent 55%),
-    linear-gradient(135deg, #121912, #070a07);
-  border: 1px solid rgba(158, 255, 0, 0.14);
   overflow: hidden;
+  isolation: isolate;
+  background: #070a07;
+  border: 1px solid rgba(158, 255, 0, 0.14);
+}
+
+.bs-rewards__hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center right;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bs-rewards__hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: min(38rem, 100%);
 }
 
 .bs-rewards__eyebrow {
@@ -5117,7 +5159,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
 .bs-coupon-card {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 0.85rem;
   align-items: center;
   width: 100%;
@@ -5169,31 +5211,67 @@ html.bs-sidebar-collapsed .bs-shell__body {
 }
 
 .bs-coupon-card__badge {
-  width: 2.65rem;
-  height: 2.65rem;
-  border-radius: 13px;
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   color: var(--bs-green);
-  background: rgba(158, 255, 0, 0.1);
-  border: 1px solid rgba(158, 255, 0, 0.16);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(158, 255, 0, 0.16), transparent 70%),
+    rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(158, 255, 0, 0.2);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.bs-coupon-card__badge--cashback,
+.bs-coupon-card__badge img,
+.bs-coupon-detail__mini-icon img {
+  width: 2.15rem;
+  height: 2.15rem;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+.bs-coupon-card__badge--bonus {
+  color: #f0d78c;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(232, 197, 71, 0.18), transparent 70%),
+    rgba(0, 0, 0, 0.35);
+  border-color: rgba(232, 197, 71, 0.28);
+}
+
+.bs-coupon-card__badge--cashback {
+  color: #9eff00;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(158, 255, 0, 0.18), transparent 70%),
+    rgba(0, 0, 0, 0.35);
+  border-color: rgba(158, 255, 0, 0.28);
+}
+
 .bs-coupon-card__badge--fee {
   color: #e8c547;
-  background: rgba(232, 197, 71, 0.12);
-  border-color: rgba(232, 197, 71, 0.22);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(232, 197, 71, 0.16), transparent 70%),
+    rgba(0, 0, 0, 0.35);
+  border-color: rgba(232, 197, 71, 0.26);
 }
 
 .bs-coupon-card__badge--ticket {
   color: #b8f3ff;
-  background: rgba(127, 212, 255, 0.12);
-  border-color: rgba(127, 212, 255, 0.22);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(127, 212, 255, 0.16), transparent 70%),
+    rgba(0, 0, 0, 0.35);
+  border-color: rgba(127, 212, 255, 0.26);
 }
 
 .bs-coupon-card__badge--riskfree {
   color: #d2ff8a;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(158, 255, 0, 0.14), transparent 70%),
+    rgba(0, 0, 0, 0.35);
+  border-color: rgba(158, 255, 0, 0.22);
 }
 
 .bs-coupon-card__body {
@@ -5496,6 +5574,18 @@ html.bs-sidebar-collapsed .bs-shell__body {
     max-width: none;
     width: 100%;
     flex-wrap: nowrap;
+  }
+
+  .bs-history__panel .bs-filter {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .bs-history__panel .bs-filter__chip {
+    flex: 1 1 calc(50% - 0.35rem);
+    max-width: none;
+    min-width: 0;
   }
 
   .bs-coupon-detail__grid {
@@ -6006,3 +6096,978 @@ html.bs-sidebar-collapsed .bs-shell__body {
     flex-direction: column;
   }
 }
+
+/* =========================================================
+   LAYOUT REFS — Rewards / History / Support extensions
+   ========================================================= */
+
+.bs-rewards__reco {
+  margin-top: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(158, 255, 0, 0.22);
+}
+
+.bs-rewards__reco-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.bs-rewards__reco-copy em {
+  font-style: normal;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bs-green);
+}
+
+.bs-rewards__reco-copy strong {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.bs-rewards__reco-copy span {
+  font-size: 0.78rem;
+  color: var(--bs-muted);
+}
+
+.bs-rewards__reco-cta {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bs-green);
+  color: #0a1200;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0.65rem 1.05rem;
+  cursor: pointer;
+}
+
+.bs-rewards__hero-art {
+  width: min(100%, 280px);
+  height: auto;
+  border-radius: 18px;
+  object-fit: cover;
+  aspect-ratio: 3 / 2;
+  border: 1px solid rgba(158, 255, 0, 0.18);
+  box-shadow: 0 0 28px rgba(158, 255, 0, 0.18);
+}
+
+.bs-rewards-stat {
+  position: relative;
+  overflow: hidden;
+}
+
+.bs-rewards-stat__bar {
+  position: absolute;
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  border-radius: 999px;
+}
+
+.bs-rewards-stat__bar.is-green { background: var(--bs-green); }
+.bs-rewards-stat__bar.is-muted { background: rgba(255, 255, 255, 0.28); }
+.bs-rewards-stat__bar.is-red { background: #ff7a7a; }
+
+.bs-rewards-stat__countdown {
+  display: block;
+  margin-top: 0.25rem;
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: var(--bs-green);
+}
+
+.bs-coupon-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+
+.bs-coupon-card__tags span {
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bs-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+}
+
+.bs-coupon-card__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  text-align: right;
+}
+
+.bs-coupon-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bs-coupon-card__status i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.bs-coupon-card__status--available {
+  color: var(--bs-green);
+  background: transparent;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.bs-coupon-card__status--used,
+.bs-coupon-card__status--expired {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.bs-coupon-card__expiry {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.bs-coupon-card__date {
+  font-size: 0.68rem;
+  color: var(--bs-muted);
+}
+
+.bs-coupon-card__chevron {
+  color: var(--bs-muted);
+  display: grid;
+  place-items: center;
+}
+
+.bs-coupon-detail {
+  padding: 0;
+  overflow: hidden;
+}
+
+.bs-coupon-detail__media {
+  position: relative;
+  aspect-ratio: 8 / 3;
+  background: #0a0e0b;
+}
+
+.bs-coupon-detail__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bs-coupon-detail__badges {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  right: 0.7rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bs-coupon-detail__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.05rem 1.1rem;
+}
+
+.bs-coupon-detail__minis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.bs-coupon-detail__minis article {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.55rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.bs-coupon-detail__mini-icon {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--bs-green);
+  background: rgba(158, 255, 0, 0.1);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.bs-coupon-detail__mini-icon img {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.bs-coupon-detail__minis em {
+  display: block;
+  font-style: normal;
+  font-size: 0.62rem;
+  color: var(--bs-muted);
+}
+
+.bs-coupon-detail__minis strong {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.78rem;
+  color: #fff;
+}
+
+.bs-coupon-detail__validity-head,
+.bs-coupon-detail__validity-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.72rem;
+}
+
+.bs-coupon-detail__validity-head span {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 750;
+  color: var(--bs-muted);
+}
+
+.bs-coupon-detail__validity-head strong {
+  color: var(--bs-green);
+}
+
+.bs-coupon-detail__validity-bar {
+  margin: 0.45rem 0;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.bs-coupon-detail__validity-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #9eff00, #6fcf00);
+}
+
+.bs-coupon-detail__validity-meta em {
+  font-style: normal;
+  color: var(--bs-muted);
+}
+
+.bs-coupon-detail__origin {
+  padding: 0.75rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(158, 255, 0, 0.16);
+  background: rgba(158, 255, 0, 0.04);
+}
+
+.bs-coupon-detail__origin span {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bs-muted);
+}
+
+.bs-coupon-detail__origin strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #fff;
+}
+
+.bs-coupon-detail__origin p {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--bs-muted);
+  line-height: 1.4;
+}
+
+.bs-history__hero-art {
+  width: min(100%, 300px);
+  height: auto;
+  border-radius: 18px;
+  object-fit: cover;
+  aspect-ratio: 5 / 4;
+  border: 1px solid rgba(158, 255, 0, 0.2);
+  box-shadow: 0 0 30px rgba(158, 255, 0, 0.16);
+}
+
+.bs-history__export {
+  border: 1px solid rgba(158, 255, 0, 0.35);
+  border-radius: 999px;
+  background: rgba(158, 255, 0, 0.1);
+  color: var(--bs-green);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+}
+
+.bs-history__export:hover {
+  background: rgba(158, 255, 0, 0.16);
+}
+
+.bs-history__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+  gap: 1rem;
+  align-items: start;
+}
+
+.bs-history__panel .bs-filter {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0.4rem;
+  padding: 0.15rem 1.1rem 1rem;
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+
+.bs-history__panel .bs-filter__chip {
+  flex: 1 1 0;
+  max-width: 8.5rem;
+  min-width: 4.75rem;
+  height: auto;
+  min-height: 3.35rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.22rem;
+  padding: 0.55rem 0.65rem;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(230, 236, 230, 0.88);
+}
+
+.bs-history__panel .bs-filter__chip:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+  border-color: rgba(158, 255, 0, 0.28);
+}
+
+.bs-history__panel .bs-filter__chip.is-active {
+  background: var(--bs-green);
+  color: #0a1200;
+  border-color: rgba(198, 255, 90, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(10, 18, 0, 0.12),
+    0 0 18px rgba(158, 255, 0, 0.35);
+}
+
+.bs-history__panel .bs-filter__chip em {
+  min-width: 1.45rem;
+  height: 1.45rem;
+  font-size: 0.74rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.bs-history__panel .bs-filter__chip.is-active em {
+  background: rgba(10, 18, 0, 0.2);
+  color: #0a1200;
+  font-weight: 900;
+}
+
+.bs-history__row.is-active {
+  border-color: rgba(158, 255, 0, 0.35);
+  background: rgba(158, 255, 0, 0.06);
+}
+
+.bs-history__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: sticky;
+  top: 0.75rem;
+}
+
+.bs-history-feature {
+  border-radius: 18px;
+  border: 1px solid rgba(158, 255, 0, 0.16);
+  background: #0a0e0b;
+  overflow: hidden;
+}
+
+.bs-history-feature__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+}
+
+.bs-history-feature__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bs-history-feature__badge {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  border-radius: 999px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0a1200;
+  background: var(--bs-green);
+}
+
+.bs-history-feature__badge--shipped {
+  background: #6eb6ff;
+  color: #041018;
+}
+
+.bs-history-feature__badge--used {
+  background: rgba(255, 255, 255, 0.75);
+  color: #111;
+}
+
+.bs-history-feature__body {
+  padding: 0.9rem 1rem 1rem;
+}
+
+.bs-history-feature__body p {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bs-muted);
+}
+
+.bs-history-feature__body strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.bs-history-feature__body em {
+  display: block;
+  margin-top: 0.2rem;
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--bs-muted);
+}
+
+.bs-history-feature__link {
+  margin-top: 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--bs-green);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+  padding: 0;
+  cursor: pointer;
+}
+
+.bs-history-numbers {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, #121912, #0a0e0b);
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.bs-history-numbers h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.bs-history-numbers ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.bs-history-numbers li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--bs-green);
+}
+
+.bs-history-numbers li span {
+  color: var(--bs-muted);
+  font-size: 0.78rem;
+}
+
+.bs-history-numbers li strong {
+  color: #fff;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.bs-history-numbers__chart {
+  position: absolute;
+  right: 0.8rem;
+  bottom: 0.6rem;
+  opacity: 0.25;
+  color: var(--bs-green);
+  transform: scale(1.6);
+  transform-origin: bottom right;
+}
+
+.bs-history-quote {
+  margin: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(158, 255, 0, 0.18);
+  background: rgba(158, 255, 0, 0.05);
+  padding: 1rem;
+}
+
+.bs-history-quote > span {
+  display: block;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--bs-green);
+}
+
+.bs-history-quote p {
+  margin: 0.2rem 0 0.55rem;
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.bs-history-quote strong {
+  color: var(--bs-green);
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+}
+
+.bs-history__toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 40;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: rgba(10, 18, 0, 0.95);
+  border: 1px solid rgba(158, 255, 0, 0.35);
+  color: #fff;
+  font-size: 0.84rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.bs-support__hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: end;
+  min-height: 250px;
+  padding: 1.5rem 1.4rem 1.4rem;
+  border-radius: 24px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #070a07;
+  border: 1px solid rgba(158, 255, 0, 0.14);
+}
+
+.bs-support__hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center right;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bs-support__hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: min(36rem, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.bs-support__hero-copy .bs-support__status {
+  margin-top: 0.95rem;
+}
+
+.bs-support__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: rgba(158, 255, 0, 0.85);
+}
+
+.bs-support__hero h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #fff;
+}
+
+.bs-support__hero h1 span {
+  color: var(--bs-green);
+}
+
+.bs-support__lead {
+  margin: 0.65rem 0 0;
+  max-width: 34rem;
+  color: var(--bs-muted);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.bs-support__hero-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.bs-support__hero-art {
+  width: min(100%, 280px);
+  border-radius: 18px;
+  object-fit: cover;
+  aspect-ratio: 5 / 4;
+  border: 1px solid rgba(158, 255, 0, 0.2);
+}
+
+.bs-support__tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.bs-support-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(10, 14, 11, 0.92);
+}
+
+.bs-support-tile__icon {
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--bs-green);
+  background: rgba(158, 255, 0, 0.1);
+  border: 1px solid rgba(158, 255, 0, 0.2);
+}
+
+.bs-support-tile p {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--bs-muted);
+}
+
+.bs-support-tile strong {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.bs-support-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.bs-support-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-style: normal;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #0a1200;
+  background: var(--bs-green);
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+}
+
+.bs-support-card__cta.is-solid {
+  background: var(--bs-green);
+  color: #0a1200;
+  border: 0;
+  font-weight: 800;
+}
+
+.bs-support-specialist {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.15rem;
+  border-radius: 18px;
+  border: 1px solid rgba(158, 255, 0, 0.18);
+  background: linear-gradient(100deg, rgba(158, 255, 0, 0.06), transparent 55%), #0a0e0b;
+}
+
+.bs-support-specialist img {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid rgba(158, 255, 0, 0.35);
+}
+
+.bs-support-specialist__online {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--bs-green);
+}
+
+.bs-support-specialist__online i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--bs-green);
+}
+
+.bs-support-specialist strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.05rem;
+  color: #fff;
+}
+
+.bs-support-specialist p {
+  margin: 0.15rem 0 0;
+  color: var(--bs-muted);
+  font-size: 0.84rem;
+}
+
+.bs-support-specialist__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--bs-green);
+  border: 1px solid rgba(158, 255, 0, 0.28);
+  border-radius: 999px;
+  padding: 0.4rem 0.7rem;
+}
+
+.bs-support-faq__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.bs-support-faq__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: min(240px, 100%);
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--bs-muted);
+}
+
+.bs-support-faq__search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  outline: none;
+}
+
+.bs-support-faq__cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.bs-support-faq__cats button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--bs-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.bs-support-faq__cats button.is-active {
+  border-color: rgba(158, 255, 0, 0.4);
+  background: rgba(158, 255, 0, 0.12);
+  color: var(--bs-green);
+}
+
+.bs-support-faq__empty {
+  margin: 0.75rem 0 0;
+  color: var(--bs-muted);
+  font-size: 0.86rem;
+}
+
+.bs-support-cta-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.2rem;
+  border-radius: 18px;
+  border: 1px solid rgba(158, 255, 0, 0.22);
+  background: linear-gradient(180deg, rgba(158, 255, 0, 0.08), rgba(8, 11, 8, 0.96));
+}
+
+.bs-support-cta-panel__icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--bs-green);
+  background: rgba(158, 255, 0, 0.12);
+}
+
+.bs-support-cta-panel strong {
+  font-size: 1.05rem;
+  color: #fff;
+}
+
+.bs-support-cta-panel p {
+  margin: 0;
+  color: var(--bs-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.bs-support-cta-panel__btn {
+  margin-top: 0.4rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--bs-green);
+  color: #0a1200;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .bs-rewards__layout,
+  .bs-history__body {
+    grid-template-columns: 1fr;
+  }
+
+  .bs-history__rail,
+  .bs-rewards__detail {
+    position: static;
+  }
+
+  .bs-history__stats,
+  .bs-support__tiles,
+  .bs-rewards__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bs-rewards__hero,
+  .bs-history__hero,
+  .bs-support__hero {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 720px) {
+  .bs-coupon-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .bs-coupon-card__aside {
+    grid-column: 2;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .bs-coupon-detail__minis,
+  .bs-history__stats,
+  .bs-support__tiles,
+  .bs-rewards__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .bs-support-specialist {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .bs-support-specialist__badge {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .bs-rewards__reco {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+

@@ -12,19 +12,21 @@ const BENEFITS = [
   {
     id: 'rewards',
     title: 'Recompensas reais',
-    lead: 'Cashback, tickets e prêmios por desempenho.',
+    lead: 'Seu esforço vira resultados concretos.',
   },
   {
     id: 'missions',
     title: 'Missões mensais',
-    lead: 'Desafios claros para manter a disciplina.',
+    lead: 'Novos desafios, novas conquistas.',
   },
   {
     id: 'growth',
     title: 'Evolução constante',
-    lead: 'Acompanhe progresso e suba de nível.',
+    lead: 'Mais experiência, mais oportunidades.',
   },
 ] as const
+
+const ATMOSPHERE_WORDS = ['Disciplina', 'Foco', 'Evolução', 'Resultados'] as const
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -39,14 +41,31 @@ export function LoginPage() {
   }
 
   function goCreateAccount() {
-    navigate('/inicio')
+    navigate('/missoes')
   }
 
   return (
     <div className="bx-login" id="topo">
       <div className="bx-login__bg" aria-hidden="true">
+        <img
+          className="bx-login__bg-img"
+          src="/media/login/hero-bg.jpg"
+          alt=""
+          width={1600}
+          height={900}
+        />
         <div className="bx-login__veil" />
       </div>
+
+      <ul className="bx-login__atmosphere" aria-hidden="true">
+        {ATMOSPHERE_WORDS.map((word) => (
+          <li key={word}>{word}</li>
+        ))}
+      </ul>
+
+      <p className="bx-login__float-badge" aria-hidden="true">
+        Traders constroem liberdade
+      </p>
 
       <header className="bx-login__header">
         <div className="bx-login__brand">
@@ -54,8 +73,8 @@ export function LoginPage() {
             <BullLogo />
           </span>
           <strong>Bullex</strong>
-          <em>Trading mais inteligente para você</em>
         </div>
+        <p className="bx-login__tagline">Trading mais inteligente para você</p>
       </header>
 
       <main className="bx-login__main">
@@ -85,8 +104,10 @@ export function LoginPage() {
 
         <aside className="bx-login__panel" aria-labelledby="bx-login-form-title">
           <form className="bx-login-card" onSubmit={handleSubmit}>
-            <h2 id="bx-login-form-title">Acesse sua conta</h2>
-            <p>Entre agora e continue sua jornada em direção a novas conquistas.</p>
+            <h2 id="bx-login-form-title">
+              Você pode já estar mais perto de uma <span>recompensa</span> do que imagina.
+            </h2>
+            <p>Entre agora e confira seu progresso nas missões deste mês.</p>
 
             <label className="bx-login-field">
               <span>ID Bullex</span>
@@ -107,6 +128,7 @@ export function LoginPage() {
             <label className="bx-login-field">
               <span>Senha</span>
               <span className="bx-login-field__control">
+                <LockFieldIcon />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -166,11 +188,16 @@ export function LoginPage() {
             </div>
           </article>
         ))}
-        <p className="bx-login__script">Disciplina hoje, liberdade amanhã.</p>
       </section>
 
+      <p className="bx-login__motto">
+        <i aria-hidden="true" />
+        Disciplina hoje. Liberdade sempre.
+        <i aria-hidden="true" />
+      </p>
+
       <p className="bx-login__skip">
-        <Link to="/inicio">Continuar sem login</Link>
+        <Link to="/missoes">Continuar sem login</Link>
       </p>
     </div>
   )
@@ -192,6 +219,15 @@ function UserFieldIcon() {
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
       <circle cx="12" cy="8" r="3.2" />
       <path d="M5.5 19.5c1.4-3.2 3.8-4.8 6.5-4.8s5.1 1.6 6.5 4.8" />
+    </svg>
+  )
+}
+
+function LockFieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
     </svg>
   )
 }
@@ -256,8 +292,9 @@ function BenefitIcon({ id }: { id: (typeof BENEFITS)[number]['id'] }) {
     case 'missions':
       return (
         <svg {...props}>
-          <circle cx="12" cy="12" r="8" />
-          <circle cx="12" cy="12" r="3" />
+          <rect x="5" y="6" width="14" height="14" rx="2" />
+          <path d="M5 10h14M9 4v3M15 4v3" />
+          <path d="m10.5 14 1.2 1.2 2.5-2.8" />
         </svg>
       )
     case 'growth':

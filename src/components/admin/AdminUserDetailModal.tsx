@@ -95,6 +95,14 @@ export function AdminUserDetailModal({ user, onClose }: AdminUserDetailModalProp
             <dt>Último acesso</dt>
             <dd>{user.lastLogin}</dd>
           </div>
+          <div className="bx-admin-user-modal__full">
+            <dt>Última ação</dt>
+            <dd>{user.lastAction}</dd>
+          </div>
+          <div className="bx-admin-user-modal__full">
+            <dt>Notas internas</dt>
+            <dd>{user.notes.trim() ? user.notes : 'Sem notas internas.'}</dd>
+          </div>
         </dl>
 
         <div className="bs-admin-modal__actions">

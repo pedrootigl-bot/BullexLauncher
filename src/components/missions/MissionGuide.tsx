@@ -104,7 +104,7 @@ export function MissionGuide({ missions, journey, onContinue }: MissionGuideProp
           />
         ))}
         {filtered.length === 0 ? (
-          <p className="bs-guide__empty">Nenhuma missão neste filtro.</p>
+          <p className="bs-guide__empty">Nenhuma missão ativa neste filtro. Volte amanhã para novas metas.</p>
         ) : null}
       </div>
 

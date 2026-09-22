@@ -12,6 +12,11 @@ export type RewardCoupon = {
   status: CouponStatus
   issuedAt: string
   expiresAt: string
+  /** ISO `YYYY-MM-DD` para countdown. */
+  expiresAtIso: string
+  tags: string[]
+  imageSrc: string
+  usedAt?: string
   minDeposit?: string
   maxDiscount?: string
   source: string
@@ -23,6 +28,7 @@ export type RewardsStats = {
   used: number
   expired: number
   nextExpiryLabel: string
+  nextExpiryIso: string
 }
 
 export const couponStatusLabel: Record<CouponStatus, string> = {
@@ -44,6 +50,36 @@ export const mockRewardsStats: RewardsStats = {
   used: 2,
   expired: 1,
   nextExpiryLabel: '28/09/2026',
+  nextExpiryIso: '2026-09-28',
+}
+
+/** Dias até a data ISO (0 = hoje ou já passou). */
+export function getDaysUntilIso(isoDate: string, now = new Date()): number {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  if (!year || !month || !day) return 0
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfEnd = new Date(year, month - 1, day)
+  const diffMs = startOfEnd.getTime() - startOfToday.getTime()
+  return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)))
+}
+
+export function formatDaysUntilLabel(days: number, mode: 'vence' | 'em' = 'vence'): string {
+  if (days <= 0) return mode === 'em' ? 'Hoje' : 'Vence hoje'
+  if (days === 1) return mode === 'em' ? 'Em 1 dia' : 'Vence em 1 dia'
+  return mode === 'em' ? `Em ${days} dias` : `Vence em ${days} dias`
+}
+
+export function getCouponValidityPercent(coupon: RewardCoupon, now = new Date()): number {
+  const [ey, em, ed] = coupon.expiresAtIso.split('-').map(Number)
+  const issuedParts = coupon.issuedAt.split('/').map(Number)
+  if (!ey || !em || !ed || issuedParts.length < 3) return 50
+  const [id, im, iy] = issuedParts
+  const start = new Date(iy, im - 1, id)
+  const end = new Date(ey, em - 1, ed)
+  const total = end.getTime() - start.getTime()
+  if (total <= 0) return coupon.status === 'expired' ? 100 : 0
+  const elapsed = now.getTime() - start.getTime()
+  return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)))
 }
 
 export const mockRewardCoupons: RewardCoupon[] = [
@@ -57,9 +93,12 @@ export const mockRewardCoupons: RewardCoupon[] = [
     status: 'available',
     issuedAt: '10/09/2026',
     expiresAt: '28/09/2026',
+    expiresAtIso: '2026-09-28',
+    tags: ['DEPÓSITO', 'BÔNUS'],
+    imageSrc: '/media/coupons/coupon-bonus.jpg?v2',
     minDeposit: 'R$ 100,00',
     maxDiscount: 'R$ 500,00',
-    source: 'Passe de Recompensas · Nível 3',
+    source: 'Passe de Recompensas Nível 3',
     terms: 'Válido para um único depósito. Não cumulativo com outros bônus ativos.',
   },
   {
@@ -72,6 +111,9 @@ export const mockRewardCoupons: RewardCoupon[] = [
     status: 'available',
     issuedAt: '05/09/2026',
     expiresAt: '05/10/2026',
+    expiresAtIso: '2026-10-05',
+    tags: ['CASHBACK'],
+    imageSrc: '/media/coupons/coupon-cashback.jpg',
     minDeposit: '—',
     maxDiscount: 'R$ 50,00',
     source: 'Missão · Depositar este mês',
@@ -87,6 +129,9 @@ export const mockRewardCoupons: RewardCoupon[] = [
     status: 'available',
     issuedAt: '12/09/2026',
     expiresAt: '30/09/2026',
+    expiresAtIso: '2026-09-30',
+    tags: ['TAXAS'],
+    imageSrc: '/media/coupons/coupon-fee.jpg',
     minDeposit: '—',
     maxDiscount: 'R$ 200,00',
     source: 'Trilha Premium · Nível 6',
@@ -102,6 +147,9 @@ export const mockRewardCoupons: RewardCoupon[] = [
     status: 'available',
     issuedAt: '01/09/2026',
     expiresAt: '15/10/2026',
+    expiresAtIso: '2026-10-15',
+    tags: ['RISKFREE'],
+    imageSrc: '/media/coupons/coupon-riskfree.jpg',
     minDeposit: 'R$ 50,00',
     maxDiscount: 'R$ 100,00',
     source: 'Missão · Primeiro passo',
@@ -117,6 +165,10 @@ export const mockRewardCoupons: RewardCoupon[] = [
     status: 'used',
     issuedAt: '20/08/2026',
     expiresAt: '31/08/2026',
+    expiresAtIso: '2026-08-31',
+    tags: ['SORTEIO'],
+    imageSrc: '/media/coupons/coupon-ticket.jpg',
+    usedAt: '28/08/2026',
     minDeposit: '—',
     maxDiscount: '—',
     source: 'Missão · Evolução real',
@@ -132,6 +184,10 @@ export const mockRewardCoupons: RewardCoupon[] = [
     status: 'used',
     issuedAt: '02/07/2026',
     expiresAt: '31/07/2026',
+    expiresAtIso: '2026-07-31',
+    tags: ['DEPÓSITO'],
+    imageSrc: '/media/coupons/coupon-bonus.jpg?v2',
+    usedAt: '05/07/2026',
     minDeposit: 'R$ 50,00',
     maxDiscount: 'R$ 250,00',
     source: 'Onboarding BullStart',
@@ -147,6 +203,9 @@ export const mockRewardCoupons: RewardCoupon[] = [
     status: 'expired',
     issuedAt: '01/06/2026',
     expiresAt: '30/06/2026',
+    expiresAtIso: '2026-06-30',
+    tags: ['CASHBACK'],
+    imageSrc: '/media/coupons/coupon-cashback.jpg',
     minDeposit: '—',
     maxDiscount: 'R$ 25,00',
     source: 'Passe · Temporada Junho',

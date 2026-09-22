@@ -89,7 +89,7 @@ export function DashboardHeader() {
 
   return (
     <header className="bs-topbar">
-      <Link className="bs-topbar__brand" to="/inicio" aria-label="Bullex">
+      <Link className="bs-topbar__brand" to="/missoes" aria-label="Bullex">
         <span className="bs-topbar__logo" aria-hidden="true">
           <BullexMark />
         </span>

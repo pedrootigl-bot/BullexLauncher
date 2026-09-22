@@ -8,6 +8,8 @@ type AdminCreateModalProps = {
   kind: AdminCreateKind
   mode?: AdminModalMode
   initialValues?: Record<string, string>
+  occupiedLevels?: number[]
+  occupiedKeys?: string[]
   onClose: () => void
   onSubmit: (
     kind: AdminCreateKind,
@@ -42,7 +44,7 @@ const MODAL_COPY: Record<
     eyebrow: 'Passe',
     createTitle: 'Adicionar recompensa',
     editTitle: 'Editar recompensa',
-    createLead: 'Cadastre um item na trilha gratuita ou premium por nível.',
+    createLead: 'Cadastre um item digital na BullPass por nível.',
     editLead: 'Atualize a recompensa selecionada no passe.',
     createSubmit: 'Salvar no passe',
     editSubmit: 'Salvar alterações',
@@ -60,7 +62,7 @@ const MODAL_COPY: Record<
     eyebrow: 'Campanha',
     createTitle: 'Configurar campanha',
     editTitle: 'Editar campanha',
-    createLead: 'Atualize banner, título e período de destaque na home.',
+    createLead: 'Atualize banner, título, ordem e CTA na home.',
     editLead: 'Ajuste a campanha selecionada e o banner.',
     createSubmit: 'Publicar campanha',
     editSubmit: 'Salvar alterações',
@@ -71,6 +73,8 @@ export function AdminCreateModal({
   kind,
   mode = 'create',
   initialValues,
+  occupiedLevels = [],
+  occupiedKeys = [],
   onClose,
   onSubmit,
   onDelete,
@@ -90,6 +94,23 @@ export function AdminCreateModal({
     return null
   })
   const [ownedPreview, setOwnedPreview] = useState(false)
+
+  const levelNumber = Number(values.level)
+  const currentPassKey = `${values.track}-${levelNumber}`
+  const initialPassKey = `${initialValues?.track}-${initialValues?.level}`
+  const levelOccupied =
+    kind === 'pass' &&
+    Number.isFinite(levelNumber) &&
+    occupiedKeys.includes(currentPassKey) &&
+    (!isEdit || currentPassKey !== initialPassKey)
+
+  const passPreviewTitle = buildPassTitle(values.amount, values.unitLabel, values.title)
+  const unitPreviewLabel =
+    values.unit === 'brl' ? 'R$' : values.unit === 'days' ? 'dias' : 'volume'
+  const missionProgressHint =
+    values.target.trim().length > 0
+      ? `Meta: ${values.target} ${unitPreviewLabel} · +${values.points || '0'} pontos`
+      : 'Defina a meta para prévia do progresso.'
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -126,15 +147,23 @@ export function AdminCreateModal({
     updateField('bannerFile', file?.name ?? '')
   }
 
+  function handleGenerateCode() {
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase()
+    updateField('code', `BULL${suffix}`)
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (kind === 'campaign' && !bannerName && mode === 'create') return
+    if (kind === 'campaign' && !bannerName && !bannerPreview && mode === 'create') return
+    if (kind === 'pass' && levelOccupied) return
     onSubmit(
       kind,
       {
         ...values,
+        title: kind === 'pass' ? passPreviewTitle : values.title,
         bannerFile: bannerName || values.bannerFile || '',
         bannerPreview: bannerPreview ?? values.bannerPreview ?? '',
+        placement: 'home',
       },
       mode,
     )
@@ -186,6 +215,27 @@ export function AdminCreateModal({
                 required
               />
               <div className="bs-admin-modal__row">
+                <SelectField
+                  label="Status"
+                  name="status"
+                  value={values.status}
+                  onChange={updateField}
+                  options={[
+                    { value: 'draft', label: 'Rascunho' },
+                    { value: 'active', label: 'Ativa' },
+                    { value: 'ended', label: 'Encerrada' },
+                  ]}
+                />
+                <Field
+                  label="CTA do botão"
+                  name="ctaLabel"
+                  value={values.ctaLabel}
+                  onChange={updateField}
+                  placeholder="Depositar"
+                  required
+                />
+              </div>
+              <div className="bs-admin-modal__row">
                 <Field
                   label="Meta"
                   name="target"
@@ -216,27 +266,59 @@ export function AdminCreateModal({
                   required
                 />
                 <Field
-                  label="Encerra em"
-                  name="endsAt"
-                  value={values.endsAt}
+                  label="Início"
+                  name="startsAt"
+                  value={values.startsAt}
                   onChange={updateField}
-                  placeholder="30/10/2026"
+                  placeholder="01/09/2026"
                   required
                 />
+              </div>
+              <Field
+                label="Encerra em"
+                name="endsAt"
+                value={values.endsAt}
+                onChange={updateField}
+                placeholder="30/10/2026"
+                required
+              />
+              <div className="bs-admin-modal__preview">
+                <span>Prévia do progresso</span>
+                <strong>{missionProgressHint}</strong>
+                <div className="bs-admin-modal__preview-bar" aria-hidden="true">
+                  <i style={{ width: '35%' }} />
+                </div>
+                <em>O usuário vê a barra até {values.target || '0'} {unitPreviewLabel}.</em>
               </div>
             </>
           ) : null}
 
           {kind === 'pass' ? (
             <>
-              <Field
-                label="Título da recompensa"
-                name="title"
-                value={values.title}
-                onChange={updateField}
-                placeholder="Ex.: R$ 25 cashback"
-                required
-              />
+              <div className="bs-admin-modal__row">
+                <Field
+                  label="Valor"
+                  name="amount"
+                  value={values.amount}
+                  onChange={updateField}
+                  placeholder="25"
+                  required
+                />
+                <SelectField
+                  label="Unidade"
+                  name="unitLabel"
+                  value={values.unitLabel}
+                  onChange={updateField}
+                  options={[
+                    { value: 'R$', label: 'R$' },
+                    { value: 'pontos', label: 'Pontos' },
+                    { value: 'ticket', label: 'Ticket' },
+                    { value: '%', label: '%' },
+                    { value: 'dias', label: 'Dias' },
+                    { value: 'caixa', label: 'Caixa' },
+                  ]}
+                />
+              </div>
               <div className="bs-admin-modal__row">
                 <SelectField
                   label="Trilha"
@@ -244,8 +326,8 @@ export function AdminCreateModal({
                   value={values.track}
                   onChange={updateField}
                   options={[
-                    { value: 'free', label: 'Gratuita' },
-                    { value: 'premium', label: 'Premium' },
+                    { value: 'free', label: 'BullPass' },
+                    { value: 'premium', label: 'BullPass Premium' },
                   ]}
                 />
                 <Field
@@ -257,30 +339,43 @@ export function AdminCreateModal({
                   required
                 />
               </div>
-              <div className="bs-admin-modal__row">
-                <SelectField
-                  label="Tipo"
-                  name="kind"
-                  value={values.kind}
-                  onChange={updateField}
-                  options={[
-                    { value: 'cashback', label: 'Cashback' },
-                    { value: 'points', label: 'Pontos' },
-                    { value: 'ticket', label: 'Ticket' },
-                    { value: 'chest', label: 'Caixa' },
-                    { value: 'report', label: 'Relatório' },
-                    { value: 'balance', label: 'Saldo' },
-                    { value: 'badge', label: 'Emblema' },
-                    { value: 'bonus', label: 'Bônus' },
-                  ]}
-                />
-                <Field
-                  label="Estoque"
-                  name="stock"
-                  value={values.stock}
-                  onChange={updateField}
-                  placeholder="Ilimitado ou 1000"
-                />
+              {levelOccupied ? (
+                <p className="bs-admin-modal__warn">
+                  Este nível já possui recompensa nesta trilha. Escolha outro nível.
+                </p>
+              ) : null}
+              <SelectField
+                label="Tipo"
+                name="kind"
+                value={values.kind}
+                onChange={updateField}
+                options={[
+                  { value: 'cashback', label: 'Cashback' },
+                  { value: 'points', label: 'Pontos' },
+                  { value: 'ticket', label: 'Ticket' },
+                  { value: 'chest', label: 'Caixa' },
+                  { value: 'report', label: 'Relatório' },
+                  { value: 'balance', label: 'Saldo' },
+                  { value: 'badge', label: 'Emblema' },
+                  { value: 'bonus', label: 'Bônus' },
+                ]}
+              />
+              <Field
+                label="Elegibilidade"
+                name="eligibility"
+                value={values.eligibility}
+                onChange={updateField}
+                placeholder="Válido por 7 dias após o resgate"
+              />
+              <p className="bs-admin-modal__hint">Estoque digital: <strong>Ilimitado</strong> (automático).</p>
+              <div className="bs-admin-modal__pass-preview" aria-label="Prévia do card">
+                <span>Prévia do card</span>
+                <article className={`bs-admin-modal__pass-card is-${values.track}`}>
+                  <em>{values.track === 'premium' ? 'Premium' : 'BullPass'}</em>
+                  <strong>{passPreviewTitle || 'Recompensa'}</strong>
+                  <p>{values.eligibility || 'Benefício digital do passe'}</p>
+                  <b>Nv. {values.level || '—'}</b>
+                </article>
               </div>
             </>
           ) : null}
@@ -295,7 +390,7 @@ export function AdminCreateModal({
                 placeholder="Ex.: Bônus de Depósito 150%"
                 required
               />
-              <div className="bs-admin-modal__row">
+              <div className="bs-admin-modal__row bs-admin-modal__row--code">
                 <Field
                   label="Código"
                   name="code"
@@ -304,6 +399,15 @@ export function AdminCreateModal({
                   placeholder="BULL150"
                   required
                 />
+                <button
+                  type="button"
+                  className="bs-admin-modal__generate"
+                  onClick={handleGenerateCode}
+                >
+                  Gerar código
+                </button>
+              </div>
+              <div className="bs-admin-modal__row">
                 <SelectField
                   label="Tipo"
                   name="type"
@@ -317,8 +421,6 @@ export function AdminCreateModal({
                     { value: 'riskfree', label: 'RiskFree' },
                   ]}
                 />
-              </div>
-              <div className="bs-admin-modal__row">
                 <Field
                   label="Valor / benefício"
                   name="valueLabel"
@@ -327,6 +429,8 @@ export function AdminCreateModal({
                   placeholder="150% de bônus"
                   required
                 />
+              </div>
+              <div className="bs-admin-modal__row">
                 <Field
                   label="Limite de usos"
                   name="limit"
@@ -335,15 +439,34 @@ export function AdminCreateModal({
                   placeholder="1000"
                   required
                 />
+                <Field
+                  label="Depósito mínimo (R$)"
+                  name="minDeposit"
+                  value={values.minDeposit}
+                  onChange={updateField}
+                  placeholder="100"
+                />
               </div>
-              <Field
-                label="Validade"
-                name="expiresAt"
-                value={values.expiresAt}
-                onChange={updateField}
-                placeholder="28/09/2026"
-                required
-              />
+              <div className="bs-admin-modal__row">
+                <Field
+                  label="Validade"
+                  name="expiresAt"
+                  value={values.expiresAt}
+                  onChange={updateField}
+                  placeholder="28/09/2026"
+                  required
+                />
+                <SelectField
+                  label="1 uso por usuário"
+                  name="onePerUser"
+                  value={values.onePerUser}
+                  onChange={updateField}
+                  options={[
+                    { value: 'true', label: 'Sim' },
+                    { value: 'false', label: 'Não' },
+                  ]}
+                />
+              </div>
               <Field
                 label="Condições"
                 name="terms"
@@ -351,6 +474,24 @@ export function AdminCreateModal({
                 onChange={updateField}
                 placeholder="Regras de elegibilidade"
               />
+              {isEdit && values.redemptions ? (
+                <div className="bs-admin-modal__preview">
+                  <span>Uso atual</span>
+                  <strong>
+                    {values.redemptions} / {values.limit || '0'} usos
+                  </strong>
+                  <div className="bs-admin-modal__preview-bar" aria-hidden="true">
+                    <i
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (Number(values.redemptions) / Math.max(1, Number(values.limit) || 1)) * 100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </>
           ) : null}
 
@@ -361,15 +502,8 @@ export function AdminCreateModal({
                 name="title"
                 value={values.title}
                 onChange={updateField}
-                placeholder="Ex.: iPhone 18 Pro Max"
+                placeholder="Ex.: iPhone 15 Pro Max"
                 required
-              />
-              <Field
-                label="Subtítulo"
-                name="subtitle"
-                value={values.subtitle}
-                onChange={updateField}
-                placeholder="Campanha especial da temporada"
               />
               <ImageUploadField
                 fileName={bannerName}
@@ -377,6 +511,11 @@ export function AdminCreateModal({
                 onChange={handleBannerChange}
                 required={!isEdit}
               />
+              {bannerPreview ? (
+                <div className="bs-admin-modal__banner-preview">
+                  <img src={bannerPreview} alt={values.altText || values.title || 'Prévia do banner'} />
+                </div>
+              ) : null}
               <div className="bs-admin-modal__row">
                 <Field
                   label="Início"
@@ -395,17 +534,35 @@ export function AdminCreateModal({
                   required
                 />
               </div>
-              <SelectField
-                label="Posição"
-                name="placement"
-                value={values.placement}
+              <div className="bs-admin-modal__row">
+                <Field
+                  label="Ordem no carrossel"
+                  name="priority"
+                  value={values.priority}
+                  onChange={updateField}
+                  placeholder="1"
+                  required
+                />
+                <Field
+                  label="Link do CTA"
+                  name="ctaUrl"
+                  value={values.ctaUrl}
+                  onChange={updateField}
+                  placeholder="/missoes"
+                  required
+                />
+              </div>
+              <Field
+                label="Texto alternativo do banner"
+                name="altText"
+                value={values.altText}
                 onChange={updateField}
-                options={[
-                  { value: 'home', label: 'Home' },
-                  { value: 'missions', label: 'BullStart' },
-                  { value: 'rewards', label: 'Recompensas' },
-                ]}
+                placeholder="Descrição acessível da imagem"
+                required
               />
+              <p className="bs-admin-modal__hint">
+                Todos os banners de campanha são publicados na posição <strong>Home</strong>.
+              </p>
             </>
           ) : null}
 
@@ -423,7 +580,7 @@ export function AdminCreateModal({
               <button type="button" className="bs-admin-modal__ghost" onClick={onClose}>
                 Cancelar
               </button>
-              <button type="submit" className="bs-admin-modal__cta">
+              <button type="submit" className="bs-admin-modal__cta" disabled={levelOccupied}>
                 {submitLabel}
               </button>
             </div>
@@ -432,6 +589,16 @@ export function AdminCreateModal({
       </div>
     </div>
   )
+}
+
+function buildPassTitle(amount?: string, unitLabel?: string, fallback?: string) {
+  const cleanAmount = amount?.trim() ?? ''
+  const cleanUnit = unitLabel?.trim() ?? ''
+  if (!cleanAmount) return fallback?.trim() || ''
+  if (cleanUnit === 'R$') return `R$ ${cleanAmount}`
+  if (cleanUnit === '%') return `${cleanAmount}%`
+  if (cleanUnit) return `${cleanAmount} ${cleanUnit}`
+  return cleanAmount
 }
 
 function Field({
@@ -561,7 +728,10 @@ function defaultValues(kind: AdminCreateKind): Record<string, string> {
         target: '',
         unit: 'brl',
         points: '',
+        status: 'draft',
+        startsAt: '',
         endsAt: '',
+        ctaLabel: 'Continuar',
       }
     case 'pass':
       return {
@@ -569,7 +739,9 @@ function defaultValues(kind: AdminCreateKind): Record<string, string> {
         track: 'free',
         level: '',
         kind: 'cashback',
-        stock: 'Ilimitado',
+        amount: '',
+        unitLabel: 'R$',
+        eligibility: 'Válido por 7 dias após o resgate',
       }
     case 'coupon':
       return {
@@ -580,15 +752,20 @@ function defaultValues(kind: AdminCreateKind): Record<string, string> {
         limit: '',
         expiresAt: '',
         terms: '',
+        minDeposit: '0',
+        onePerUser: 'true',
+        redemptions: '0',
       }
     case 'campaign':
       return {
         title: '',
-        subtitle: '',
         bannerFile: '',
         startsAt: '',
         endsAt: '',
         placement: 'home',
+        priority: '1',
+        ctaUrl: '/missoes',
+        altText: '',
       }
     default: {
       const _exhaustive: never = kind

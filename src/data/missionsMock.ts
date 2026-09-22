@@ -47,7 +47,8 @@ export type JourneyProgress = {
   footerSubtitle: string
   footerCta: string
   seasonLabel: string
-  daysLeft: number
+  /** Data de encerramento da season (ISO `YYYY-MM-DD`). */
+  seasonEndsAt: string
 }
 
 export type RankId = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
@@ -137,6 +138,7 @@ export type NextPassReward = {
   tags: string[]
   kind: PassRewardKind
   detail: string
+  benefits: string[]
   premiumTitle?: string
 }
 
@@ -192,7 +194,7 @@ export const mockJourney: JourneyProgress = {
   footerSubtitle: 'Complete missões para avançar no passe.',
   footerCta: 'Ver regras da temporada',
   seasonLabel: 'Temporada 09 · Setembro 2026',
-  daysLeft: 9,
+  seasonEndsAt: '2026-10-02',
 }
 
 export const mockNextPassReward: NextPassReward = {
@@ -202,6 +204,7 @@ export const mockNextPassReward: NextPassReward = {
   tags: ['SALDO', 'PASSE'],
   kind: 'balance',
   detail: 'Saldo promocional creditado na conta para uso em operações elegíveis.',
+  benefits: ['Crédito na conta', 'Uso em operações elegíveis', 'Exclusivo no BullPass'],
   premiumTitle: 'VIP por 7 dias',
 }
 
@@ -481,6 +484,21 @@ const PASS_KIND_DETAILS: Record<PassRewardKind, string> = {
   points: 'Pontos bônus creditados imediatamente na jornada da temporada.',
 }
 
+const PASS_KIND_BENEFITS: Record<PassRewardKind, string[]> = {
+  balance: ['Crédito na conta', 'Uso em operações elegíveis', 'Exclusivo no BullPass'],
+  ticket: ['Participação em campanhas', 'Chance em sorteios', 'Exclusivo no BullPass'],
+  riskfree: ['Protege seu capital', 'Mais confiança para operar', 'Exclusivo no BullPass'],
+  cashback: ['Retorno sobre volume', 'Crédito automático', 'Exclusivo no BullPass'],
+  xpboost: ['Acelera a progressão', 'Mais pontos por missão', 'Exclusivo no BullPass'],
+  bonus: ['Multiplica o depósito', 'Boost na conta', 'Exclusivo no BullPass'],
+  coupon: ['Desconto exclusivo', 'Ativação rápida', 'Exclusivo no BullPass'],
+  vip: ['Benefícios VIP', 'Prioridade na temporada', 'Exclusivo no BullPass'],
+  multiplier: ['Mais pontos por ação', 'Janela limitada', 'Exclusivo no BullPass'],
+  badge: ['Destaque no perfil', 'Marca da temporada', 'Exclusivo no BullPass'],
+  avatar: ['Personalização única', 'Identidade visual', 'Exclusivo no BullPass'],
+  points: ['Pontos imediatos', 'Acelera o nível', 'Exclusivo no BullPass'],
+}
+
 /** Próxima recompensa do passe = item do nível atual + 1. */
 export function getNextPassReward(
   currentLevel: number,
@@ -503,6 +521,11 @@ export function getNextPassReward(
     tags: PASS_KIND_TAGS[freeReward.kind] ?? [PASS_KIND_LABELS[freeReward.kind], 'PASSE'],
     kind: freeReward.kind,
     detail,
+    benefits: PASS_KIND_BENEFITS[freeReward.kind] ?? [
+      'Desbloqueio no próximo nível',
+      'Progresso da temporada',
+      'Exclusivo no BullPass',
+    ],
     premiumTitle:
       options?.hasPremium && premiumReward
         ? `${premiumReward.title} · ${premiumReward.subtitle}`
@@ -559,6 +582,29 @@ export function applyJourneyPoints(
     currentPoints,
     remainingPoints: Math.max(0, targetPoints - currentPoints),
   }
+}
+
+/** Dias calendário restantes até o fim da season (0 = encerra hoje ou já encerrou). */
+export function getSeasonDaysLeft(seasonEndsAt: string, now = new Date()): number {
+  const [year, month, day] = seasonEndsAt.split('-').map(Number)
+  if (!year || !month || !day) return 0
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfEnd = new Date(year, month - 1, day)
+  const diffMs = startOfEnd.getTime() - startOfToday.getTime()
+  return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)))
+}
+
+export function formatSeasonEndsLabel(daysLeft: number): string {
+  if (daysLeft <= 0) return 'Season encerrada'
+  if (daysLeft === 1) return 'Acaba em 1 dia'
+  return `Acaba em ${daysLeft} dias`
+}
+
+/** Ms até a próxima meia-noite local (+1s) para refrescar o contador diário. */
+export function msUntilNextLocalMidnight(now = new Date()): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1)
+  return Math.max(1000, next.getTime() - now.getTime())
 }
 
 export const mockMissions: Mission[] = [
@@ -623,7 +669,7 @@ export const mockMissions: Mission[] = [
     rewardIcon: 'ticket',
     remainingLabel: 'Faltam 2 áreas para explorar.',
     unit: 'days',
-    imageSrc: '/media/missions/mission-02.jpg',
+    imageSrc: '/media/missions/mission-04.jpg',
     points: 150,
   },
 ]
@@ -643,7 +689,6 @@ export const seasonMissionCtas: Record<number, string> = {
 }
 
 export const navItems = [
-  { id: 'inicio', label: 'Início', path: '/inicio' },
   { id: 'bullstart', label: 'BullStart', path: '/missoes', badge: 'NOVO' },
   { id: 'recompensas', label: 'Recompensas', path: '/recompensas' },
   { id: 'historico', label: 'Histórico', path: '/historico' },

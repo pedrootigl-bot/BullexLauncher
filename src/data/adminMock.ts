@@ -42,6 +42,8 @@ export type AdminRecentUser = {
   balance: string
   depositsTotal: string
   lastLogin: string
+  lastAction: string
+  notes: string
   accountStatus: 'active' | 'pending' | 'blocked'
 }
 
@@ -65,13 +67,15 @@ export type AdminFeedItem = {
 export type AdminCampaignCard = {
   id: string
   title: string
-  subtitle: string
   image: string
   status: 'active' | 'paused'
   startsAt: string
   endsAt: string
-  placement: 'home' | 'missions' | 'rewards'
+  placement: 'home'
   progress: number
+  priority: number
+  ctaUrl: string
+  altText: string
 }
 
 export type AdminMissionRow = {
@@ -83,7 +87,9 @@ export type AdminMissionRow = {
   status: 'active' | 'draft' | 'ended'
   completions: number
   points: number
+  startsAt: string
   endsAt: string
+  ctaLabel: string
 }
 
 export type AdminRewardRow = {
@@ -93,7 +99,9 @@ export type AdminRewardRow = {
   level: number
   kind: 'cashback' | 'points' | 'ticket' | 'chest' | 'report' | 'balance' | 'badge' | 'bonus'
   claims: number
-  stock: string
+  amount: string
+  unitLabel: string
+  eligibility: string
 }
 
 export type AdminCouponRow = {
@@ -107,22 +115,38 @@ export type AdminCouponRow = {
   limit: number
   expiresAt: string
   terms: string
+  minDeposit: string
+  onePerUser: boolean
 }
 
-export const adminNavItems: { id: AdminNavId; label: string }[] = [
-  { id: 'overview', label: 'Visão Geral' },
-  { id: 'users', label: 'Usuários' },
-  { id: 'deposits', label: 'Depósitos' },
-  { id: 'withdrawals', label: 'Saques' },
-  { id: 'rewards', label: 'Recompensas' },
-  { id: 'campaigns', label: 'Campanhas' },
-  { id: 'missions', label: 'Missões' },
-  { id: 'coupons', label: 'Cupons' },
-  { id: 'prizes', label: 'Prêmios' },
-  { id: 'contents', label: 'Conteúdos' },
-  { id: 'notifications', label: 'Notificações' },
-  { id: 'reports', label: 'Relatórios' },
-  { id: 'settings', label: 'Configurações' },
+export type AdminNavItem = {
+  id: AdminNavId
+  label: string
+  group: 'geral' | 'operacao' | 'engajamento' | 'sistema'
+  ready?: boolean
+}
+
+export const adminNavGroups: { id: AdminNavItem['group']; label: string }[] = [
+  { id: 'geral', label: 'Geral' },
+  { id: 'operacao', label: 'Operação' },
+  { id: 'engajamento', label: 'Engajamento' },
+  { id: 'sistema', label: 'Sistema' },
+]
+
+export const adminNavItems: AdminNavItem[] = [
+  { id: 'overview', label: 'Visão Geral', group: 'geral', ready: true },
+  { id: 'users', label: 'Usuários', group: 'geral' },
+  { id: 'deposits', label: 'Depósitos', group: 'operacao' },
+  { id: 'withdrawals', label: 'Saques', group: 'operacao' },
+  { id: 'reports', label: 'Relatórios', group: 'operacao' },
+  { id: 'rewards', label: 'Recompensas', group: 'engajamento', ready: true },
+  { id: 'campaigns', label: 'Campanhas', group: 'engajamento', ready: true },
+  { id: 'missions', label: 'Missões', group: 'engajamento', ready: true },
+  { id: 'coupons', label: 'Cupons', group: 'engajamento', ready: true },
+  { id: 'prizes', label: 'Prêmios', group: 'engajamento' },
+  { id: 'contents', label: 'Conteúdos', group: 'sistema' },
+  { id: 'notifications', label: 'Notificações', group: 'sistema' },
+  { id: 'settings', label: 'Configurações', group: 'sistema' },
 ]
 
 export const adminProfile = {
@@ -199,14 +223,16 @@ export const adminRecentUsers: AdminRecentUser[] = [
     name: 'Ana Clara Souza',
     email: 'ana.souza@email.com',
     initials: 'AS',
-    registeredAt: '17/09/2025',
+    registeredAt: '17/09/2026',
     phone: '+55 11 98877-2211',
     document: '123.456.789-00',
     country: 'Brasil',
     plan: 'Premium',
     balance: 'R$ 4.280,00',
     depositsTotal: 'R$ 12.500,00',
-    lastLogin: '17/09/2025 · 14:18',
+    lastLogin: '17/09/2026 · 14:18',
+    lastAction: 'Depósito R$ 1.000',
+    notes: 'Usuária Premium engajada. Priorizar suporte VIP.',
     accountStatus: 'active',
   },
   {
@@ -214,14 +240,16 @@ export const adminRecentUsers: AdminRecentUser[] = [
     name: 'Bruno Mendes',
     email: 'bruno.m@email.com',
     initials: 'BM',
-    registeredAt: '17/09/2025',
+    registeredAt: '17/09/2026',
     phone: '+55 21 97766-1100',
     document: '987.654.321-00',
     country: 'Brasil',
     plan: 'Free',
     balance: 'R$ 0,00',
     depositsTotal: 'R$ 0,00',
-    lastLogin: '17/09/2025 · 11:02',
+    lastLogin: '17/09/2026 · 11:02',
+    lastAction: 'Cadastro concluído',
+    notes: 'Aguardando primeiro depósito.',
     accountStatus: 'pending',
   },
   {
@@ -229,14 +257,16 @@ export const adminRecentUsers: AdminRecentUser[] = [
     name: 'Carla Ribeiro',
     email: 'carla.r@email.com',
     initials: 'CR',
-    registeredAt: '16/09/2025',
+    registeredAt: '16/09/2026',
     phone: '+55 31 99655-3344',
     document: '456.789.123-00',
     country: 'Brasil',
     plan: 'Premium',
     balance: 'R$ 1.940,50',
     depositsTotal: 'R$ 6.800,00',
-    lastLogin: '16/09/2025 · 22:41',
+    lastLogin: '16/09/2026 · 22:41',
+    lastAction: 'Missão concluída',
+    notes: '',
     accountStatus: 'active',
   },
   {
@@ -244,14 +274,16 @@ export const adminRecentUsers: AdminRecentUser[] = [
     name: 'Diego Alves',
     email: 'diego.a@email.com',
     initials: 'DA',
-    registeredAt: '16/09/2025',
+    registeredAt: '16/09/2026',
     phone: '+55 41 98544-7788',
     document: '321.654.987-00',
     country: 'Brasil',
     plan: 'Free',
     balance: 'R$ 120,00',
     depositsTotal: 'R$ 900,00',
-    lastLogin: '14/09/2025 · 09:15',
+    lastLogin: '14/09/2026 · 09:15',
+    lastAction: 'Conta bloqueada',
+    notes: 'Bloqueio por revisão de risco. Não liberar sem compliance.',
     accountStatus: 'blocked',
   },
   {
@@ -259,14 +291,16 @@ export const adminRecentUsers: AdminRecentUser[] = [
     name: 'Elena Costa',
     email: 'elena.c@email.com',
     initials: 'EC',
-    registeredAt: '15/09/2025',
+    registeredAt: '15/09/2026',
     phone: '+55 51 99122-5566',
     document: '654.321.987-00',
     country: 'Brasil',
     plan: 'Premium',
     balance: 'R$ 8.110,00',
     depositsTotal: 'R$ 21.300,00',
-    lastLogin: '17/09/2025 · 08:33',
+    lastLogin: '17/09/2026 · 08:33',
+    lastAction: 'Resgate BullPass',
+    notes: 'Alta retenção. Candidata a campanha referral.',
     accountStatus: 'active',
   },
 ]
@@ -324,48 +358,60 @@ export const adminCampaignCards: AdminCampaignCard[] = [
   {
     id: 'c1',
     title: 'Haval H6',
-    subtitle: 'Sorteio do SUV da temporada',
     image: '/media/banners/haval-h6.jpg',
     status: 'active',
-    startsAt: '01/09/2025',
-    endsAt: '30/09',
+    startsAt: '01/09/2026',
+    endsAt: '30/09/2026',
     placement: 'home',
     progress: 68,
+    priority: 1,
+    ctaUrl: '/missoes',
+    altText: 'Banner do sorteio Haval H6 na temporada BullStart',
   },
   {
     id: 'c2',
     title: 'iPhone 15 Pro Max',
-    subtitle: 'Campanha especial de prêmios',
     image: '/media/banners/iphone-18-pro-max.jpg',
     status: 'active',
-    startsAt: '01/09/2025',
-    endsAt: '22/09',
-    placement: 'missions',
+    startsAt: '01/09/2026',
+    endsAt: '22/09/2026',
+    placement: 'home',
     progress: 52,
+    priority: 2,
+    ctaUrl: '/missoes',
+    altText: 'Banner da campanha iPhone 15 Pro Max',
   },
   {
     id: 'c3',
     title: 'PlayStation 5',
-    subtitle: 'Destaque BullStart',
     image: '/media/banners/ps5-pro-gta6.jpg',
     status: 'active',
-    startsAt: '05/09/2025',
-    endsAt: '15/09',
-    placement: 'rewards',
+    startsAt: '05/09/2026',
+    endsAt: '15/09/2026',
+    placement: 'home',
     progress: 82,
+    priority: 3,
+    ctaUrl: '/missoes',
+    altText: 'Banner PlayStation 5 em destaque no BullStart',
   },
   {
     id: 'c4',
     title: 'Cashback 250%',
-    subtitle: 'Oferta de depósito limitada',
     image: '/media/hero-missoes.jpg',
-    status: 'active',
-    startsAt: '10/09/2025',
-    endsAt: '28/09',
+    status: 'paused',
+    startsAt: '10/09/2026',
+    endsAt: '28/09/2026',
     placement: 'home',
     progress: 41,
+    priority: 4,
+    ctaUrl: '/missoes',
+    altText: 'Banner da oferta de cashback 250%',
   },
 ]
+
+export const adminCampaignPlacementLabel: Record<AdminCampaignCard['placement'], string> = {
+  home: 'Home',
+}
 
 export const adminMissions: AdminMissionRow[] = [
   {
@@ -377,7 +423,9 @@ export const adminMissions: AdminMissionRow[] = [
     status: 'active',
     completions: 1840,
     points: 300,
+    startsAt: '01/09/2026',
     endsAt: '30/10/2026',
+    ctaLabel: 'Depositar',
   },
   {
     id: 'm2',
@@ -388,7 +436,9 @@ export const adminMissions: AdminMissionRow[] = [
     status: 'active',
     completions: 962,
     points: 250,
+    startsAt: '01/09/2026',
     endsAt: '30/10/2026',
+    ctaLabel: 'Negociar',
   },
   {
     id: 'm3',
@@ -399,7 +449,9 @@ export const adminMissions: AdminMissionRow[] = [
     status: 'active',
     completions: 710,
     points: 400,
+    startsAt: '01/09/2026',
     endsAt: '30/10/2026',
+    ctaLabel: 'Ver operações',
   },
   {
     id: 'm4',
@@ -410,7 +462,9 @@ export const adminMissions: AdminMissionRow[] = [
     status: 'draft',
     completions: 0,
     points: 180,
-    endsAt: '—',
+    startsAt: '01/11/2026',
+    endsAt: '30/11/2026',
+    ctaLabel: 'Explorar',
   },
 ]
 
@@ -422,7 +476,9 @@ export const adminPassRewards: AdminRewardRow[] = [
     level: 1,
     kind: 'cashback',
     claims: 4200,
-    stock: 'Ilimitado',
+    amount: '10',
+    unitLabel: 'R$',
+    eligibility: 'Válido por 7 dias após o resgate',
   },
   {
     id: 'r2',
@@ -431,7 +487,9 @@ export const adminPassRewards: AdminRewardRow[] = [
     level: 2,
     kind: 'points',
     claims: 1180,
-    stock: 'Ilimitado',
+    amount: '250',
+    unitLabel: 'pontos',
+    eligibility: 'Creditado imediatamente na jornada',
   },
   {
     id: 'r3',
@@ -440,7 +498,9 @@ export const adminPassRewards: AdminRewardRow[] = [
     level: 4,
     kind: 'ticket',
     claims: 860,
-    stock: '5.000',
+    amount: '1',
+    unitLabel: 'ticket',
+    eligibility: 'Válido na campanha ativa da temporada',
   },
   {
     id: 'r4',
@@ -449,7 +509,9 @@ export const adminPassRewards: AdminRewardRow[] = [
     level: 6,
     kind: 'chest',
     claims: 410,
-    stock: '2.000',
+    amount: '1',
+    unitLabel: 'caixa',
+    eligibility: 'Abertura única por conta',
   },
 ]
 
@@ -465,6 +527,8 @@ export const adminCoupons: AdminCouponRow[] = [
     limit: 1000,
     expiresAt: '28/09/2026',
     terms: 'Válido para um único depósito. Não cumulativo.',
+    minDeposit: '100',
+    onePerUser: true,
   },
   {
     id: 'cp2',
@@ -477,6 +541,8 @@ export const adminCoupons: AdminCouponRow[] = [
     limit: 500,
     expiresAt: '15/10/2026',
     terms: 'Exige volume mínimo após a ativação.',
+    minDeposit: '200',
+    onePerUser: true,
   },
   {
     id: 'cp3',
@@ -489,6 +555,8 @@ export const adminCoupons: AdminCouponRow[] = [
     limit: 300,
     expiresAt: '01/11/2026',
     terms: 'Aplicável em operações elegíveis.',
+    minDeposit: '0',
+    onePerUser: false,
   },
   {
     id: 'cp4',
@@ -501,6 +569,8 @@ export const adminCoupons: AdminCouponRow[] = [
     limit: 1000,
     expiresAt: '01/08/2026',
     terms: 'Cupom de onboarding esgotado.',
+    minDeposit: '50',
+    onePerUser: true,
   },
 ]
 
@@ -517,7 +587,7 @@ export const adminCouponStatusLabel: Record<AdminCouponRow['status'], string> = 
 }
 
 export const adminTrackLabel: Record<AdminRewardRow['track'], string> = {
-  free: 'Gratuita',
+  free: 'BullPass',
   premium: 'Premium',
 }
 
