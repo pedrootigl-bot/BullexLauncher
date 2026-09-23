@@ -6,6 +6,7 @@ import { AdminKpiCard } from '../components/admin/AdminKpiCard'
 import { AdminOverview } from '../components/admin/AdminOverview'
 import { AdminPageHeader } from '../components/admin/AdminPageHeader'
 import { BullstartDrawPanel } from '../components/admin/BullstartDrawPanel'
+import { DrawPrizeDetailModal } from '../components/admin/DrawPrizeDetailModal'
 import { getRewardTypeMeta } from '../components/admin/rewardTypeMeta'
 import { StatusBadge } from '../components/admin/StatusBadge'
 import { AppSidebar } from '../components/missions/AppSidebar'
@@ -784,6 +785,7 @@ function DrawHistoryPanel({
   onRefresh: () => void
 }) {
   const [statusFilter, setStatusFilter] = useState<'all' | 'prepared' | 'completed'>('all')
+  const [detailDraw, setDetailDraw] = useState<AdminDraw | null>(null)
 
   const filtered = draws.filter(
     (draw) => statusFilter === 'all' || draw.status === statusFilter,
@@ -845,8 +847,14 @@ function DrawHistoryPanel({
               </span>
               <span role="cell">{draw.seasonLabel}</span>
               <span role="cell">
-                {draw.prizeUnits > 1 ? `${draw.prizeUnits}× ` : ''}
-                {draw.prizeName}
+                <button
+                  type="button"
+                  className="bx-bullstart-link bx-bullstart-link--name"
+                  onClick={() => setDetailDraw(draw)}
+                >
+                  {draw.prizeUnits > 1 ? `${draw.prizeUnits}× ` : ''}
+                  {draw.prizeName}
+                </button>
               </span>
               <span role="cell">{draw.participantCount}</span>
               <span role="cell">
@@ -871,6 +879,17 @@ function DrawHistoryPanel({
           ))}
         </div>
       )}
+
+      {detailDraw ? (
+        <DrawPrizeDetailModal
+          draw={detailDraw}
+          onClose={() => setDetailDraw(null)}
+          onUpdated={(updated) => {
+            setDetailDraw(updated)
+            onRefresh()
+          }}
+        />
+      ) : null}
     </section>
   )
 }

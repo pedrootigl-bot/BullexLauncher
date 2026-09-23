@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { ImageDropzone } from '../admin/ImageDropzone'
 
 export type AdminCreateKind = 'mission' | 'pass' | 'coupon' | 'campaign'
 export type AdminModalMode = 'create' | 'edit'
@@ -509,17 +510,13 @@ export function AdminCreateModal({
                 placeholder="Ex.: iPhone 15 Pro Max"
                 required
               />
-              <ImageUploadField
+              <ImageDropzone
+                label="Banner do sorteio"
                 fileName={bannerName}
                 previewUrl={bannerPreview}
                 onChange={handleBannerChange}
                 required={!isEdit}
               />
-              {bannerPreview ? (
-                <div className="bs-admin-modal__banner-preview">
-                  <img src={bannerPreview} alt={values.altText || values.title || 'Prévia do banner'} />
-                </div>
-              ) : null}
               <div className="bs-admin-modal__row">
                 <Field
                   label="Início"
@@ -658,68 +655,6 @@ function SelectField({
         ))}
       </select>
     </label>
-  )
-}
-
-function ImageUploadField({
-  fileName,
-  previewUrl,
-  onChange,
-  required = false,
-}: {
-  fileName: string
-  previewUrl: string | null
-  onChange: (file: File | null) => void
-  required?: boolean
-}) {
-  return (
-    <div className="bs-admin-modal__field">
-      <span>Banner do sorteio</span>
-      <label className={`bs-admin-upload${previewUrl ? ' has-file' : ''}`}>
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          required={required && !fileName}
-          onChange={(event) => {
-            const file = event.target.files?.[0] ?? null
-            onChange(file)
-          }}
-        />
-        {previewUrl ? (
-          <span className="bs-admin-upload__preview">
-            <img src={previewUrl} alt="" />
-            <span className="bs-admin-upload__meta">
-              <strong>{fileName}</strong>
-              <em>Clique para trocar a imagem</em>
-            </span>
-          </span>
-        ) : (
-          <span className="bs-admin-upload__empty">
-            <UploadIcon />
-            <strong>Enviar banner</strong>
-            <em>PNG, JPG ou WEBP · até 5 MB</em>
-          </span>
-        )}
-      </label>
-      {fileName ? (
-        <button
-          type="button"
-          className="bs-admin-upload__remove"
-          onClick={() => onChange(null)}
-        >
-          Remover imagem
-        </button>
-      ) : null}
-    </div>
-  )
-}
-
-function UploadIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 16V5M8.5 8.5 12 5l3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5 16.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1.5" strokeLinecap="round" />
-    </svg>
   )
 }
 

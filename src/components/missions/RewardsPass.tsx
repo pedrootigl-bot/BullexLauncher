@@ -17,6 +17,7 @@ import {
   type PassRewardState,
 } from '../../data/missionsMock'
 import { PremiumUpsellModal } from './PremiumUpsellModal'
+import { SeasonRulesModal } from './SeasonRulesModal'
 
 type RewardsPassProps = {
   journey: JourneyProgress
@@ -52,6 +53,7 @@ export function RewardsPass({
   onGainPoints,
 }: RewardsPassProps) {
   const [premiumModal, setPremiumModal] = useState<{ rewardTitle?: string } | null>(null)
+  const [rulesOpen, setRulesOpen] = useState(false)
   const [hasPremium, setHasPremium] = useState(true)
   const [claimedFreeLevels, setClaimedFreeLevels] = useState<number[]>(() =>
     freeTrack ? getInitiallyClaimedLevels(freeTrack) : [],
@@ -506,7 +508,11 @@ export function RewardsPass({
           </div>
         </div>
         <div className="bs-bp-footer__links">
-          <button type="button" className="bs-bp-footer__link">
+          <button
+            type="button"
+            className="bs-bp-footer__link"
+            onClick={() => setRulesOpen(true)}
+          >
             Ver regras da temporada →
           </button>
           <Link to="/historico" className="bs-bp-footer__history">
@@ -514,6 +520,14 @@ export function RewardsPass({
           </Link>
         </div>
       </footer>
+
+      {rulesOpen ? (
+        <SeasonRulesModal
+          seasonLabel={journey.seasonLabel}
+          seasonEndsAt={journey.seasonEndsAt}
+          onClose={() => setRulesOpen(false)}
+        />
+      ) : null}
 
       {premiumModal ? (
         <PremiumUpsellModal

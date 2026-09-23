@@ -19,8 +19,12 @@ export type AdminDrawWinner = {
   userId: string
   traderId: string
   name: string
+  whatsapp: string
   /** Ordem do sorteio (1 = primeiro sorteado). */
   place: number
+  /** false até a equipe confirmar entrega ao ganhador. */
+  prizeReceived: boolean
+  deliveryStatus: 'pending' | 'shipped' | 'delivered'
 }
 
 export type AdminDraw = {
@@ -53,6 +57,7 @@ export type AdminDrawParticipant = {
   traderId: string
   name: string
   email: string
+  whatsapp: string
   mission1: boolean
   mission2: boolean
   mission3: boolean

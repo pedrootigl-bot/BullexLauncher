@@ -86,7 +86,8 @@ Espelho local do trader vindo do site externo (+ admins criados no BullVerse).
 | `first_name` | varchar(120) | |
 | `last_name` | varchar(120) | |
 | `full_name` | varchar(240) | |
-| `phone` | varchar(40) | |
+| `phone` | varchar(40) | Telefone genérico (opcional) |
+| `whatsapp` | varchar(40) | **Contato da equipe** — DDI + número (ex.: `+5511998764321`) |
 | `document` | varchar(40) | |
 | `country` | varchar(80) | |
 | `avatar_url` | text | |
@@ -108,16 +109,17 @@ Espelho local do trader vindo do site externo (+ admins criados no BullVerse).
 | `email_verified_at` | timestamptz | |
 | `created_at` / `updated_at` | timestamptz | |
 
-Índices: `external_user_id`, `trader_id`, `email`, `role`, `account_status`.
+Índices: `external_user_id`, `trader_id`, `email`, `whatsapp`, `role`, `account_status`.
 
 **Upsert típico do postback user:**
 
 ```sql
-INSERT INTO users (id, external_user_id, trader_id, email, first_name, ..., last_synced_at)
+INSERT INTO users (id, external_user_id, trader_id, email, whatsapp, first_name, ..., last_synced_at)
 VALUES (...)
 ON CONFLICT (external_user_id) DO UPDATE SET
   trader_id = EXCLUDED.trader_id,
   email = COALESCE(EXCLUDED.email, users.email),
+  whatsapp = COALESCE(EXCLUDED.whatsapp, users.whatsapp),
   first_name = COALESCE(EXCLUDED.first_name, users.first_name),
   -- ... demais campos permitidos
   last_synced_at = NOW(),
@@ -467,6 +469,7 @@ Snapshot congelado no prepare (imutável).
 | `trader_id` | varchar(32) NOT NULL | Cópia |
 | `name` | varchar(160) NOT NULL | Cópia |
 | `email` | varchar(255) | Cópia |
+| `whatsapp` | varchar(40) | Cópia do WhatsApp no momento do snapshot |
 | `mission1` | boolean NOT NULL | |
 | `mission2` | boolean NOT NULL | |
 | `mission3` | boolean NOT NULL | |
@@ -482,6 +485,7 @@ UNIQUE (`draw_id`, `user_id`).
 | `user_id` | uuid FK → `users` | |
 | `trader_id` | varchar(32) | |
 | `name` | varchar(160) | |
+| `whatsapp` | varchar(40) | Cópia para contato pós-sorteio |
 | `place` | smallint NOT NULL | 1..N |
 | `prize_received` | boolean DEFAULT false | |
 | `delivery_status` | `delivery_status` DEFAULT `pending` | |

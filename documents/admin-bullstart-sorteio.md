@@ -15,6 +15,12 @@ Persistência: `localStorage` chaves `bx-admin-draws-v2` / `bx-draw-win-seen-v2`
 
 Critério: trader concluiu as 3 missões da temporada. Sem segunda lógica, sem seleção manual de participantes, sem peso por depósito/volume/nível.
 
+## Contato WhatsApp
+
+Cada trader/elegível/participante/vencedor carrega `whatsapp` (DDI + número). A equipe usa o link `wa.me` no detalhe, na lista de elegíveis, no CSV e no card do ganhador.
+
+No schema (`documents/schema-banco-bullverse.md`): `users.whatsapp`, cópia em `draw_participants` e `draw_winners`.
+
 ## Arquivos
 
 | Arquivo | Papel |

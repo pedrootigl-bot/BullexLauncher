@@ -44,6 +44,8 @@ export type BullstartTrader = {
   traderId: string
   name: string
   email: string
+  /** WhatsApp com DDI — contato da equipe. */
+  whatsapp: string
 }
 
 export type BullstartDeposit = {
@@ -148,72 +150,84 @@ export const bullstartTraders: BullstartTrader[] = [
     traderId: '482917',
     name: 'Gabriel',
     email: 'gabriel@email.com',
+    whatsapp: '+55 11 99876-4321',
   },
   {
     userId: 'u-ana',
     traderId: '48291',
     name: 'Ana Clara Souza',
     email: 'ana.souza@email.com',
+    whatsapp: '+55 11 98877-2211',
   },
   {
     userId: 'u-bruno',
     traderId: '48290',
     name: 'Bruno Mendes',
     email: 'bruno.m@email.com',
+    whatsapp: '+55 21 97766-1100',
   },
   {
     userId: 'u-carla',
     traderId: '48289',
     name: 'Carla Ribeiro',
     email: 'carla.r@email.com',
+    whatsapp: '+55 31 99655-3344',
   },
   {
     userId: 'u-diego',
     traderId: '48288',
     name: 'Diego Alves',
     email: 'diego.a@email.com',
+    whatsapp: '+55 41 98544-7788',
   },
   {
     userId: 'u-elena',
     traderId: '48287',
     name: 'Elena Costa',
     email: 'elena.c@email.com',
+    whatsapp: '+55 51 99122-5566',
   },
   {
     userId: 'u-felipe',
     traderId: '48102',
     name: 'Felipe Rocha',
     email: 'felipe.r@email.com',
+    whatsapp: '+55 11 98765-1002',
   },
   {
     userId: 'u-helena',
     traderId: '47955',
     name: 'Helena Dias',
     email: 'helena.d@email.com',
+    whatsapp: '+55 19 98111-7955',
   },
   {
     userId: 'u-igor',
     traderId: '47820',
     name: 'Igor Santos',
     email: 'igor.s@email.com',
+    whatsapp: '+55 85 99222-7820',
   },
   {
     userId: 'u-julia',
     traderId: '47710',
     name: 'Júlia Martins',
     email: 'julia.m@email.com',
+    whatsapp: '+55 71 98333-7710',
   },
   {
     userId: 'u-kaique',
     traderId: '47600',
     name: 'Kaique Lopes',
     email: 'kaique.l@email.com',
+    whatsapp: '+55 62 98444-7600',
   },
   {
     userId: 'u-lara',
     traderId: '47550',
     name: 'Lara Nunes',
     email: 'lara.n@email.com',
+    whatsapp: '+55 27 98555-7550',
   },
 ]
 

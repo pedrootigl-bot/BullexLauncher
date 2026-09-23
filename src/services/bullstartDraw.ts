@@ -1,4 +1,5 @@
 import { adminProfile } from '../data/adminMock'
+import { isCurrentUserAdmin } from '../utils/adminAccess'
 import {
   DRAW_STORAGE_KEY,
   DRAW_WIN_SEEN_KEY,
@@ -40,17 +41,47 @@ function emptyStore(): DrawStore {
   }
 }
 
+function normalizeDeliveryStatus(
+  value: unknown,
+): AdminDrawWinner['deliveryStatus'] {
+  if (value === 'shipped' || value === 'delivered' || value === 'pending') return value
+  return 'pending'
+}
+
+function normalizeWinner(raw: Partial<AdminDrawWinner> & Pick<AdminDrawWinner, 'userId' | 'traderId' | 'name' | 'place'>): AdminDrawWinner {
+  const deliveryStatus = normalizeDeliveryStatus(raw.deliveryStatus)
+  return {
+    userId: raw.userId,
+    traderId: raw.traderId,
+    name: raw.name,
+    whatsapp: typeof raw.whatsapp === 'string' ? raw.whatsapp : '',
+    place: raw.place,
+    prizeReceived:
+      typeof raw.prizeReceived === 'boolean'
+        ? raw.prizeReceived
+        : deliveryStatus === 'delivered',
+    deliveryStatus,
+  }
+}
+
+function normalizeParticipant(raw: AdminDrawParticipant): AdminDrawParticipant {
+  return {
+    ...raw,
+    whatsapp: typeof raw.whatsapp === 'string' ? raw.whatsapp : '',
+  }
+}
+
 function normalizeDraw(raw: AdminDraw): AdminDraw {
   const prizeUnits = Math.max(1, Number(raw.prizeUnits) || 1)
-  let winners = Array.isArray(raw.winners) ? raw.winners : []
+  let winners = Array.isArray(raw.winners) ? raw.winners.map((item) => normalizeWinner(item)) : []
   if (winners.length === 0 && raw.winnerUserId && raw.winnerTraderId && raw.winnerName) {
     winners = [
-      {
+      normalizeWinner({
         userId: raw.winnerUserId,
         traderId: raw.winnerTraderId,
         name: raw.winnerName,
         place: 1,
-      },
+      }),
     ]
   }
   const first = winners[0] ?? null
@@ -81,7 +112,9 @@ function loadStore(): DrawStore {
       draws: Array.isArray(parsed.draws)
         ? parsed.draws.map((draw) => normalizeDraw(draw as AdminDraw))
         : [],
-      participants: Array.isArray(parsed.participants) ? parsed.participants : [],
+      participants: Array.isArray(parsed.participants)
+        ? parsed.participants.map((item) => normalizeParticipant(item as AdminDrawParticipant))
+        : [],
       nextDrawSeq: typeof parsed.nextDrawSeq === 'number' && parsed.nextDrawSeq > 0 ? parsed.nextDrawSeq : 1,
     }
   } catch {
@@ -244,6 +277,31 @@ export function getDraw(drawId: string): AdminDraw | null {
   return draw ? { ...draw } : null
 }
 
+export function updateDrawWinnerDelivery(
+  drawId: string,
+  userId: string,
+  deliveryStatus: AdminDrawWinner['deliveryStatus'],
+): AdminDraw {
+  if (!isCurrentUserAdmin()) {
+    throw new Error('Apenas administradores podem atualizar a entrega do prêmio.')
+  }
+
+  const store = getStore()
+  const draw = store.draws.find((item) => item.id === drawId)
+  if (!draw) throw new Error('Sorteio não encontrado.')
+  if (draw.status !== 'completed') {
+    throw new Error('Só é possível atualizar entrega em sorteios concluídos.')
+  }
+
+  const winner = draw.winners.find((item) => item.userId === userId)
+  if (!winner) throw new Error('Ganhador não encontrado neste sorteio.')
+
+  winner.deliveryStatus = deliveryStatus
+  winner.prizeReceived = deliveryStatus === 'delivered'
+  persist()
+  return { ...draw, winners: draw.winners.map((item) => ({ ...item })) }
+}
+
 export function getDrawParticipants(drawId: string): AdminDrawParticipant[] {
   return getStore()
     .participants.filter((item) => item.drawId === drawId)
@@ -344,6 +402,7 @@ export async function prepareDraw(input: PrepareDrawInput): Promise<AdminDraw> {
     traderId: row.traderId,
     name: row.name,
     email: row.email,
+    whatsapp: row.whatsapp,
     mission1: row.mission1,
     mission2: row.mission2,
     mission3: row.mission3,
@@ -440,7 +499,10 @@ export async function executeDraw(drawId: string): Promise<ExecuteDrawResult> {
         userId: participant.userId,
         traderId: participant.traderId,
         name: participant.name,
+        whatsapp: participant.whatsapp,
         place: place + 1,
+        prizeReceived: false,
+        deliveryStatus: 'pending',
       }
     })
 

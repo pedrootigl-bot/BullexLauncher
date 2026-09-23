@@ -548,3 +548,47 @@
     padding-right: 1.2rem;
   }
 }
+
+@media (max-width: 480px) {
+  .bx-login__header {
+    padding: 0.85rem 0.9rem;
+    gap: 0.65rem;
+  }
+
+  .bx-login__tagline {
+    display: none;
+  }
+
+  .bx-login__main {
+    padding: 0.2rem 0.9rem 1rem;
+    gap: 1rem;
+  }
+
+  .bx-login__hero h1 {
+    font-size: clamp(1.75rem, 8.5vw, 2.2rem);
+    max-width: none;
+  }
+
+  .bx-login__lead {
+    font-size: 0.92rem;
+    margin-top: 0.75rem;
+  }
+
+  .bx-login__features li {
+    font-size: 0.7rem;
+  }
+
+  .bx-login-card {
+    padding: 1.05rem 0.95rem 1.1rem;
+    border-radius: 16px;
+  }
+
+  .bx-login__benefits {
+    margin: 0 0.9rem 1rem;
+    padding: 0.9rem;
+  }
+
+  .bx-login__skip {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+}

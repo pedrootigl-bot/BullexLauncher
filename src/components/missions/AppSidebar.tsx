@@ -9,6 +9,7 @@ import {
   type AdminNavId,
 } from '../../data/adminMock'
 import { navItems } from '../../data/missionsMock'
+import { isCurrentUserAdmin } from '../../utils/adminAccess'
 import { AdminNavIcon } from '../admin/AdminSidebar'
 
 const MOBILE_QUERY = '(max-width: 1100px)'
@@ -123,6 +124,7 @@ export function AppSidebar() {
           className={`bs-mobile-nav${mobileOpen ? ' is-open' : ''}`}
           aria-label="Menu principal"
           aria-hidden={!mobileOpen}
+          inert={!mobileOpen ? true : undefined}
         >
           <div className="bs-mobile-nav__head">
             <strong>Menu</strong>
@@ -178,6 +180,7 @@ function NavLinks({
     <>
       {navItems.map((item) => {
         if (item.id === 'administrador') {
+          if (!isCurrentUserAdmin()) return null
           return (
             <AdminMenuDropdown
               key={item.id}

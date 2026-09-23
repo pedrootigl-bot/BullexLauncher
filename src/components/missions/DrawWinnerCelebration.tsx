@@ -40,13 +40,15 @@ export function DrawWinnerCelebration({ draw, traderId, onClose }: DrawWinnerCel
         aria-labelledby="bs-draw-win-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <p className="bs-draw-win__eyebrow">Sorteio BullStart</p>
-        <h2 id="bs-draw-win-title">Você ganhou!</h2>
-        <p className="bs-draw-win__lead">
-          Parabéns, <strong>{displayName}</strong>. Você foi sorteado
-          {draw.prizeUnits > 1 ? ` entre ${draw.prizeUnits} ganhadores` : ''} deste sorteio com{' '}
-          {draw.participantCount} participantes.
-        </p>
+        <div className="bs-draw-win__glow" aria-hidden="true" />
+
+        <header className="bs-draw-win__header">
+          <p className="bs-draw-win__eyebrow">Sorteio BullStart</p>
+          <h2 id="bs-draw-win-title">Você ganhou!</h2>
+          <p className="bs-draw-win__lead">
+            Parabéns, <strong>{displayName}</strong>. Seu prêmio já está reservado.
+          </p>
+        </header>
 
         <div className="bs-draw-win__prize">
           <div className="bs-draw-win__media">
@@ -55,10 +57,11 @@ export function DrawWinnerCelebration({ draw, traderId, onClose }: DrawWinnerCel
           <div className="bs-draw-win__prize-copy">
             <span>Prêmio</span>
             <strong>{draw.prizeName}</strong>
-            <em>
-              Sorteio {draw.code} · {drawnLabel}
-              {myWin ? ` · ${myWin.place}º ganhador` : ''}
-            </em>
+            <ul className="bs-draw-win__meta">
+              <li>{draw.code}</li>
+              <li>{drawnLabel}</li>
+              {myWin ? <li>{myWin.place}º ganhador</li> : null}
+            </ul>
           </div>
         </div>
 

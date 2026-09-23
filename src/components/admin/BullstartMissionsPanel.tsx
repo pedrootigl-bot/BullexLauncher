@@ -16,6 +16,7 @@ import {
   type BullstartEligibleRow,
   type EligibleSortKey,
 } from '../../services/bullstartAdmin'
+import { whatsappHref } from '../../utils/whatsapp'
 import { AdminEmptyState } from './AdminEmptyState'
 import { AdminKpiCard } from './AdminKpiCard'
 import { BullstartEligibleDetailModal } from './BullstartEligibleDetailModal'
@@ -496,6 +497,17 @@ export function BullstartMissionsPanel() {
                       {row.name}
                     </button>
                     <em>{row.email}</em>
+                    {row.whatsapp ? (
+                      <a
+                        className="bx-bullstart-wa"
+                        href={whatsappHref(row.whatsapp)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {row.whatsapp}
+                      </a>
+                    ) : null}
                   </span>
                   <span role="cell" className="bx-bullstart-check" aria-label="Missão 01">
                     {row.mission1 ? '✓' : '—'}
@@ -542,6 +554,16 @@ export function BullstartMissionsPanel() {
                   >
                     {row.name}
                   </button>
+                  {row.whatsapp ? (
+                    <a
+                      className="bx-bullstart-wa bx-bullstart-wa--card"
+                      href={whatsappHref(row.whatsapp)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {row.whatsapp}
+                    </a>
+                  ) : null}
                   <span className="bx-bullstart-card__deposit">
                     {formatBullstartBRL(row.totalDeposited)}
                   </span>

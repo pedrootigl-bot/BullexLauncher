@@ -51,6 +51,8 @@ export type BullstartEligibleRow = {
   traderId: string
   name: string
   email: string
+  /** WhatsApp com DDI — contato da equipe. */
+  whatsapp: string
   totalDeposited: number
   mission1: boolean
   mission2: boolean
@@ -323,6 +325,7 @@ export function getBullstartEligible(query: EligibleQuery): BullstartEligibleRow
       traderId: trader.traderId,
       name: trader.name,
       email: trader.email,
+      whatsapp: trader.whatsapp,
       totalDeposited: deposits.get(userId) ?? 0,
       mission1: true,
       mission2: true,
@@ -337,10 +340,14 @@ export function getBullstartEligible(query: EligibleQuery): BullstartEligibleRow
   let filtered = rows.filter((row) => {
     if (statusFilter !== 'all' && row.status !== statusFilter) return false
     if (!search) return true
+    const whatsappDigits = row.whatsapp.replace(/\D/g, '')
+    const searchDigits = search.replace(/\D/g, '')
     return (
       row.traderId.toLowerCase().includes(search) ||
       row.name.toLowerCase().includes(search) ||
-      row.email.toLowerCase().includes(search)
+      row.email.toLowerCase().includes(search) ||
+      row.whatsapp.toLowerCase().includes(search) ||
+      (searchDigits.length > 0 && whatsappDigits.includes(searchDigits))
     )
   })
 
@@ -445,6 +452,7 @@ export function exportEligibleCsv(rows: BullstartEligibleRow[]): string {
     'trader_id',
     'name',
     'email',
+    'whatsapp',
     'total_deposited',
     'mission_1_completed',
     'mission_2_completed',
@@ -457,6 +465,7 @@ export function exportEligibleCsv(rows: BullstartEligibleRow[]): string {
       csvEscape(row.traderId),
       csvEscape(row.name),
       csvEscape(row.email),
+      csvEscape(row.whatsapp),
       row.totalDeposited.toFixed(2),
       row.mission1 ? 'true' : 'false',
       row.mission2 ? 'true' : 'false',

@@ -9,6 +9,7 @@ import {
   formatBullstartDateTime,
   getBullstartEligibleDetail,
 } from '../../services/bullstartAdmin'
+import { whatsappHref } from '../../utils/whatsapp'
 
 type BullstartEligibleDetailModalProps = {
   seasonId: BullstartSeasonId
@@ -44,6 +45,7 @@ export function BullstartEligibleDetailModal({
   if (!detail) return null
 
   const { drawPrize } = detail
+  const waHref = whatsappHref(detail.whatsapp)
 
   return (
     <div className="bs-admin-modal" role="presentation" onClick={onClose}>
@@ -86,6 +88,23 @@ export function BullstartEligibleDetailModal({
           <div>
             <dt>Temporada</dt>
             <dd>{detail.seasonLabel}</dd>
+          </div>
+          <div className="bx-admin-user-modal__full">
+            <dt>WhatsApp</dt>
+            <dd>
+              {detail.whatsapp ? (
+                <a
+                  className="bx-bullstart-wa"
+                  href={waHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {detail.whatsapp}
+                </a>
+              ) : (
+                '—'
+              )}
+            </dd>
           </div>
           <div>
             <dt>Total depositado</dt>
@@ -156,6 +175,16 @@ export function BullstartEligibleDetailModal({
 
         <div className="bs-admin-modal__actions">
           <div className="bs-admin-modal__actions-end">
+            {detail.whatsapp ? (
+              <a
+                className="bs-admin-modal__cta bs-admin-modal__cta--secondary"
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Abrir WhatsApp
+              </a>
+            ) : null}
             <button type="button" className="bs-admin-modal__cta" onClick={onClose}>
               Fechar
             </button>

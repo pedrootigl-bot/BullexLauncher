@@ -5,6 +5,12 @@ import { LoginPage } from './pages/LoginPage'
 import { MissionsPage } from './pages/MissionsPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { SupportPage } from './pages/SupportPage'
+import { isCurrentUserAdmin } from './utils/adminAccess'
+
+function AdminRoute() {
+  if (!isCurrentUserAdmin()) return <Navigate to="/missoes" replace />
+  return <AdminPage />
+}
 
 function App() {
   return (
@@ -16,7 +22,7 @@ function App() {
         <Route path="/recompensas" element={<RewardsPage />} />
         <Route path="/historico" element={<HistoryPage />} />
         <Route path="/suporte" element={<SupportPage />} />
-        <Route path="/administrador" element={<AdminPage />} />
+        <Route path="/administrador" element={<AdminRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

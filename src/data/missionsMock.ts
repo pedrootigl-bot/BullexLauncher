@@ -149,9 +149,14 @@ export type SeasonMission = Mission & {
   ctaLabel: string
 }
 
+export type UserRole = 'trader' | 'admin'
+
+/** Sessão MVP — conta em uso no login (ID Bullex 482917). */
 export const mockUser = {
   id: '482917',
   firstName: 'Gabriel',
+  role: 'admin' as UserRole,
+  avatarSrc: '/media/avatar-gabriel.jpg',
 }
 
 export const mockStats: UserStats = {
@@ -196,6 +201,33 @@ export const mockJourney: JourneyProgress = {
   seasonLabel: 'Temporada 09 · Setembro 2026',
   seasonEndsAt: '2026-10-02',
 }
+
+/** Regras exibidas no modal “Ver regras da temporada”. */
+export const seasonRules = {
+  title: 'Regras da temporada',
+  intro:
+    'O BullStart premia disciplina: conclua missões, acumule pontos no Passe e concorra aos prêmios da campanha.',
+  items: [
+    {
+      title: 'Missões',
+      text: 'Cada missão concluída gera pontos no Passe de Recompensas. O progresso conta apenas na temporada ativa.',
+    },
+    {
+      title: 'Passe de Recompensas',
+      text: 'Avance de nível com pontos. Itens Free podem ser resgatados por todos; a trilha Premium exige assinatura ativa.',
+    },
+    {
+      title: 'Sorteio',
+      text: 'Quem concluir as 3 missões da temporada entra no sorteio com chances iguais. O resultado é definitivo.',
+    },
+    {
+      title: 'Entrega de prêmios',
+      text: 'Saldo, tickets e cupons são creditados na conta. Prêmios físicos passam por validação da equipe Bullex.',
+    },
+  ],
+  note: 'A Bullex pode ajustar metas, prêmios e prazos conforme a campanha. Em caso de dúvida, fale com o suporte.',
+} as const
+
 
 export const mockNextPassReward: NextPassReward = {
   level: 4,

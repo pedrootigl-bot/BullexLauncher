@@ -3,6 +3,7 @@ import {
   adminAccountStatusLabel,
   type AdminRecentUser,
 } from '../../data/adminMock'
+import { whatsappHref } from '../../utils/whatsapp'
 
 type AdminUserDetailModalProps = {
   user: AdminRecentUser
@@ -24,6 +25,8 @@ export function AdminUserDetailModal({ user, onClose }: AdminUserDetailModalProp
       window.removeEventListener('keydown', onKeyDown)
     }
   }, [onClose])
+
+  const waHref = whatsappHref(user.whatsapp)
 
   return (
     <div className="bs-admin-modal" role="presentation" onClick={onClose}>
@@ -68,8 +71,21 @@ export function AdminUserDetailModal({ user, onClose }: AdminUserDetailModalProp
             <dd>{user.registeredAt}</dd>
           </div>
           <div>
-            <dt>Telefone</dt>
-            <dd>{user.phone}</dd>
+            <dt>WhatsApp</dt>
+            <dd>
+              {user.whatsapp ? (
+                <a
+                  className="bx-bullstart-wa"
+                  href={waHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {user.whatsapp}
+                </a>
+              ) : (
+                '—'
+              )}
+            </dd>
           </div>
           <div>
             <dt>Documento</dt>
@@ -107,6 +123,16 @@ export function AdminUserDetailModal({ user, onClose }: AdminUserDetailModalProp
 
         <div className="bs-admin-modal__actions">
           <div className="bs-admin-modal__actions-end">
+            {user.whatsapp ? (
+              <a
+                className="bs-admin-modal__cta bs-admin-modal__cta--secondary"
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Abrir WhatsApp
+              </a>
+            ) : null}
             <button type="button" className="bs-admin-modal__cta" onClick={onClose}>
               Fechar
             </button>

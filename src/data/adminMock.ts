@@ -28,7 +28,8 @@ export type AdminRecentUser = {
   email: string
   initials: string
   registeredAt: string
-  phone: string
+  /** WhatsApp com DDI — contato da equipe. */
+  whatsapp: string
   document: string
   country: string
   plan: string
@@ -126,9 +127,10 @@ export function parseAdminSection(value: string | null | undefined): AdminNavId 
 }
 
 export const adminProfile = {
-  name: 'Pedro Henrique',
+  name: 'Gabriel',
   role: 'Administrador',
-  initials: 'PH',
+  initials: 'GA',
+  traderId: '482917',
   brandCardTitle: 'DISCIPLINA GESTÃO RESULTADOS.',
   supportTitle: 'TRADERS REAIS, SUPORTE REAL.',
   supportLead: 'Equipe dedicada a quem opera de verdade.',
@@ -200,7 +202,7 @@ export const adminRecentUsers: AdminRecentUser[] = [
     email: 'ana.souza@email.com',
     initials: 'AS',
     registeredAt: '17/09/2026',
-    phone: '+55 11 98877-2211',
+    whatsapp: '+55 11 98877-2211',
     document: '123.456.789-00',
     country: 'Brasil',
     plan: 'Premium',
@@ -217,7 +219,7 @@ export const adminRecentUsers: AdminRecentUser[] = [
     email: 'bruno.m@email.com',
     initials: 'BM',
     registeredAt: '17/09/2026',
-    phone: '+55 21 97766-1100',
+    whatsapp: '+55 21 97766-1100',
     document: '987.654.321-00',
     country: 'Brasil',
     plan: 'Free',
@@ -234,7 +236,7 @@ export const adminRecentUsers: AdminRecentUser[] = [
     email: 'carla.r@email.com',
     initials: 'CR',
     registeredAt: '16/09/2026',
-    phone: '+55 31 99655-3344',
+    whatsapp: '+55 31 99655-3344',
     document: '456.789.123-00',
     country: 'Brasil',
     plan: 'Premium',
@@ -251,7 +253,7 @@ export const adminRecentUsers: AdminRecentUser[] = [
     email: 'diego.a@email.com',
     initials: 'DA',
     registeredAt: '16/09/2026',
-    phone: '+55 41 98544-7788',
+    whatsapp: '+55 41 98544-7788',
     document: '321.654.987-00',
     country: 'Brasil',
     plan: 'Free',
@@ -268,7 +270,7 @@ export const adminRecentUsers: AdminRecentUser[] = [
     email: 'elena.c@email.com',
     initials: 'EC',
     registeredAt: '15/09/2026',
-    phone: '+55 51 99122-5566',
+    whatsapp: '+55 51 99122-5566',
     document: '654.321.987-00',
     country: 'Brasil',
     plan: 'Premium',

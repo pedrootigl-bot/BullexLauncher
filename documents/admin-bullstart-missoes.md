@@ -49,6 +49,8 @@ Conclusões duplicadas do mesmo usuário/código contam **uma vez** (DISTINCT po
 
 `completedAt` = data mais recente entre as três conclusões.
 
+Cada elegível inclui `whatsapp` (DDI + número) para a equipe entrar em contato — visível na tabela, no modal de detalhe, no CSV e no fluxo de sorteio.
+
 ## Total depositado
 
 Calculado **antes** do join com missões:

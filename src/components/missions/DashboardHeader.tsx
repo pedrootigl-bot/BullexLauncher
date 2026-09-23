@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { DRAW_STORAGE_KEY, type AdminDraw } from '../../data/drawAdminMock'
+import { mockUser } from '../../data/missionsMock'
 import {
   dismissDrawWinNotification,
   getPendingDrawWinForTrader,
@@ -8,11 +9,11 @@ import {
 } from '../../services/bullstartDraw'
 import { DrawWinnerCelebration } from './DrawWinnerCelebration'
 
-/** Header logado — dados estáticos no MVP (futuro: API/banco). */
+/** Header logado — sessão MVP (futuro: API/banco). */
 const STATIC_USER = {
-  firstName: 'Gabriel',
-  id: '482917',
-  avatarSrc: '/media/avatar-gabriel.jpg',
+  firstName: mockUser.firstName,
+  id: mockUser.id,
+  avatarSrc: mockUser.avatarSrc,
 } as const
 
 const PLAYER_ROUTES = ['/missoes', '/recompensas', '/historico', '/suporte'] as const

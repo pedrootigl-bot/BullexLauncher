@@ -24,9 +24,12 @@ import {
   listBullstartSeasons,
   type BullstartEligibleRow,
 } from '../../services/bullstartAdmin'
+import { whatsappHref } from '../../utils/whatsapp'
 import { AdminActionMenu } from './AdminActionMenu'
 import { AdminEmptyState } from './AdminEmptyState'
+import { DrawPrizeDetailModal } from './DrawPrizeDetailModal'
 import { DrawStepper, type DrawStep } from './DrawStepper'
+import { ImageDropzone } from './ImageDropzone'
 import { StatusBadge } from './StatusBadge'
 
 type UiPhase = 'config' | 'prepared' | 'drawing' | 'completed'
@@ -65,7 +68,10 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
   const [customCategory, setCustomCategory] = useState('')
   const [customDescription, setCustomDescription] = useState('')
   const [customImage, setCustomImage] = useState('')
+  const [customImageName, setCustomImageName] = useState('')
+  const [customImageOwned, setCustomImageOwned] = useState(false)
   const [customQty, setCustomQty] = useState('1')
+  const [detailDraw, setDetailDraw] = useState<AdminDraw | null>(null)
   const reelTimerRef = useRef<number | null>(null)
 
   const season = seasons.find((item) => item.id === seasonId) ?? seasons[0]
@@ -118,7 +124,16 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
       const traderId = row.traderId.replace(/^#/, '').toLowerCase()
       const name = row.name.toLowerCase()
       const userId = 'userId' in row ? row.userId.toLowerCase() : ''
-      return traderId.includes(q) || name.includes(q) || userId.includes(q)
+      const whatsapp = 'whatsapp' in row && typeof row.whatsapp === 'string' ? row.whatsapp : ''
+      const whatsappDigits = whatsapp.replace(/\D/g, '')
+      const qDigits = q.replace(/\D/g, '')
+      return (
+        traderId.includes(q) ||
+        name.includes(q) ||
+        userId.includes(q) ||
+        whatsapp.toLowerCase().includes(q) ||
+        (qDigits.length > 0 && whatsappDigits.includes(qDigits))
+      )
     })
   }, [displayRows, search])
 
@@ -148,6 +163,37 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
       if (reelTimerRef.current) window.clearInterval(reelTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (customImageOwned && customImage.startsWith('blob:')) {
+        URL.revokeObjectURL(customImage)
+      }
+    }
+  }, [customImage, customImageOwned])
+
+  function handleCustomImageChange(file: File | null) {
+    setCustomImage((current) => {
+      if (customImageOwned && current.startsWith('blob:')) URL.revokeObjectURL(current)
+      return file ? URL.createObjectURL(file) : ''
+    })
+    setCustomImageOwned(Boolean(file))
+    setCustomImageName(file?.name ?? '')
+  }
+
+  function clearCustomPrizeForm() {
+    if (customImageOwned && customImage.startsWith('blob:')) {
+      URL.revokeObjectURL(customImage)
+    }
+    setCustomName('')
+    setCustomId('')
+    setCustomCategory('')
+    setCustomDescription('')
+    setCustomImage('')
+    setCustomImageName('')
+    setCustomImageOwned(false)
+    setCustomQty('1')
+  }
 
   function handleResetTestData() {
     if (reelTimerRef.current) {
@@ -186,12 +232,7 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
       setPrizeId(prize.id)
       setHistoryTick((n) => n + 1)
       setShowCustomPrize(false)
-      setCustomName('')
-      setCustomId('')
-      setCustomCategory('')
-      setCustomDescription('')
-      setCustomImage('')
-      setCustomQty('1')
+      clearCustomPrizeForm()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao cadastrar prêmio.')
     }
@@ -429,10 +470,15 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
                 <span>Descrição</span>
                 <input value={customDescription} onChange={(e) => setCustomDescription(e.target.value)} placeholder="Descrição curta" />
               </label>
-              <label className="bx-draw__field bx-draw__field--wide">
-                <span>URL da imagem (opcional)</span>
-                <input value={customImage} onChange={(e) => setCustomImage(e.target.value)} placeholder="/media/banners/..." />
-              </label>
+              <div className="bx-draw__field bx-draw__field--wide">
+                <ImageDropzone
+                  label="Imagem do prêmio"
+                  fileName={customImageName}
+                  previewUrl={customImage || null}
+                  optionalHint
+                  onChange={handleCustomImageChange}
+                />
+              </div>
               <button type="button" className="bx-admin-add" onClick={handleCreateCustomPrize} disabled={!customName.trim()}>
                 Salvar prêmio no catálogo
               </button>
@@ -551,7 +597,7 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por ID ou trader..."
+              placeholder="Buscar por ID, trader ou WhatsApp..."
             />
           </label>
         </div>
@@ -569,18 +615,35 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
             <div className="bx-admin-table__head" role="row">
               <span role="columnheader">Trader ID</span>
               <span role="columnheader">Nome</span>
+              <span role="columnheader">WhatsApp</span>
               <span role="columnheader">Missão 01</span>
               <span role="columnheader">Missão 02</span>
               <span role="columnheader">Missão 03</span>
               <span role="columnheader">Status</span>
             </div>
-            {filteredRows.map((row) => (
+            {filteredRows.map((row) => {
+              const whatsapp = 'whatsapp' in row && typeof row.whatsapp === 'string' ? row.whatsapp : ''
+              return (
               <div key={`${row.traderId}-${row.name}`} className="bx-admin-table__row" role="row">
                 <span role="cell" className="bx-admin-table__num">
                   {row.traderId}
                 </span>
                 <span role="cell" className="bx-admin-table__entity">
                   <strong>{row.name}</strong>
+                </span>
+                <span role="cell">
+                  {whatsapp ? (
+                    <a
+                      className="bx-bullstart-wa"
+                      href={whatsappHref(whatsapp)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {whatsapp}
+                    </a>
+                  ) : (
+                    '—'
+                  )}
                 </span>
                 <span role="cell" className="bx-draw-check" aria-label="Missão 01">
                   ✓
@@ -595,7 +658,8 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
                   <em className="bx-admin-badge bx-admin-badge--active">Elegível</em>
                 </span>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -765,7 +829,10 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
                       userId: activeDraw.winnerUserId ?? '',
                       traderId: activeDraw.winnerTraderId ?? '',
                       name: activeDraw.winnerName,
+                      whatsapp: '',
                       place: 1,
+                      prizeReceived: false,
+                      deliveryStatus: 'pending',
                     },
                   ]
                 : []
@@ -782,6 +849,19 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
                   <p>
                     Trader ID <b>{winner.traderId}</b>
                   </p>
+                  {winner.whatsapp ? (
+                    <p>
+                      WhatsApp{' '}
+                      <a
+                        className="bx-bullstart-wa"
+                        href={whatsappHref(winner.whatsapp)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {winner.whatsapp}
+                      </a>
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))}
@@ -876,7 +956,15 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
                   <strong>{draw.code}</strong>
                 </span>
                 <span role="cell">{draw.seasonLabel}</span>
-                <span role="cell">{draw.prizeName}</span>
+                <span role="cell">
+                  <button
+                    type="button"
+                    className="bx-bullstart-link bx-bullstart-link--name"
+                    onClick={() => setDetailDraw(draw)}
+                  >
+                    {draw.prizeName}
+                  </button>
+                </span>
                 <span role="cell" className="bx-admin-table__num">
                   {draw.prizeUnits ?? 1}
                 </span>
@@ -924,6 +1012,18 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
             </div>
           </div>
         </div>
+      ) : null}
+
+      {detailDraw ? (
+        <DrawPrizeDetailModal
+          draw={detailDraw}
+          onClose={() => setDetailDraw(null)}
+          onUpdated={(updated) => {
+            setDetailDraw(updated)
+            setHistoryTick((n) => n + 1)
+            onHistoryChange?.()
+          }}
+        />
       ) : null}
     </div>
   )
