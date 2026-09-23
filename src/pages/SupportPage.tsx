@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { AppSidebar } from '../components/missions/AppSidebar'
 import { DashboardHeader } from '../components/missions/DashboardHeader'
 import {
@@ -13,25 +13,6 @@ import {
 
 export function SupportPage() {
   const [openFaqId, setOpenFaqId] = useState<string | null>(null)
-  const [faqQuery, setFaqQuery] = useState('')
-  const [faqCategory, setFaqCategory] = useState('Todos')
-
-  const faqCategories = useMemo(() => {
-    const set = new Set(supportFaqs.map((faq) => faq.category))
-    return ['Todos', ...Array.from(set)]
-  }, [])
-
-  const filteredFaqs = useMemo(() => {
-    const query = faqQuery.trim().toLowerCase()
-    return supportFaqs.filter((faq) => {
-      const matchesCategory = faqCategory === 'Todos' || faq.category === faqCategory
-      const matchesQuery =
-        !query ||
-        faq.question.toLowerCase().includes(query) ||
-        faq.answer.toLowerCase().includes(query)
-      return matchesCategory && matchesQuery
-    })
-  }, [faqCategory, faqQuery])
 
   function handleChannel(id: SupportChannelId) {
     console.log('suporte channel', id)
@@ -135,35 +116,10 @@ export function SupportPage() {
 
           <div className="bs-support__bottom">
             <section className="bs-support-faq" aria-labelledby="bs-support-faq-title">
-              <div className="bs-support-faq__head">
-                <h2 id="bs-support-faq-title">Perguntas frequentes</h2>
-                <label className="bs-support-faq__search">
-                  <span className="sr-only">Buscar FAQ</span>
-                  <SearchIcon />
-                  <input
-                    type="search"
-                    value={faqQuery}
-                    onChange={(event) => setFaqQuery(event.target.value)}
-                    placeholder="Buscar dúvida..."
-                  />
-                </label>
-              </div>
-
-              <div className="bs-support-faq__cats" role="group" aria-label="Categorias FAQ">
-                {faqCategories.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    className={faqCategory === category ? 'is-active' : undefined}
-                    onClick={() => setFaqCategory(category)}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
+              <h2 id="bs-support-faq-title">Perguntas frequentes</h2>
 
               <div className="bs-support-faq__list">
-                {filteredFaqs.map((faq) => {
+                {supportFaqs.map((faq) => {
                   const open = openFaqId === faq.id
                   return (
                     <div key={faq.id} className={`bs-support-faq__item${open ? ' is-open' : ''}`}>
@@ -180,9 +136,6 @@ export function SupportPage() {
                     </div>
                   )
                 })}
-                {filteredFaqs.length === 0 ? (
-                  <p className="bs-support-faq__empty">Nenhuma pergunta encontrada.</p>
-                ) : null}
               </div>
             </section>
 
@@ -298,15 +251,6 @@ function StarIcon() {
   return (
     <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
       <path d="M12 3 14.5 8.5 20.5 9.2 16 13.4 17.2 19.3 12 16.4 6.8 19.3 8 13.4 3.5 9.2 9.5 8.5 12 3Z" />
-    </svg>
-  )
-}
-
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="11" cy="11" r="6.5" />
-      <path d="m16 16 4 4" strokeLinecap="round" />
     </svg>
   )
 }

@@ -1,17 +1,10 @@
 export type AdminNavId =
   | 'overview'
-  | 'users'
-  | 'deposits'
-  | 'withdrawals'
   | 'rewards'
   | 'campaigns'
   | 'missions'
   | 'coupons'
-  | 'prizes'
-  | 'contents'
-  | 'notifications'
-  | 'reports'
-  | 'settings'
+  | 'draw'
 
 export type AdminKpiId = 'users' | 'deposits' | 'withdrawals' | 'prizes'
 
@@ -45,23 +38,6 @@ export type AdminRecentUser = {
   lastAction: string
   notes: string
   accountStatus: 'active' | 'pending' | 'blocked'
-}
-
-export type AdminFeedAction =
-  | 'deposit'
-  | 'withdraw'
-  | 'prize'
-  | 'signup'
-  | 'coupon'
-  | 'mission'
-
-export type AdminFeedItem = {
-  id: string
-  date: string
-  action: AdminFeedAction
-  actionLabel: string
-  details: string
-  userId: string
 }
 
 export type AdminCampaignCard = {
@@ -122,32 +98,32 @@ export type AdminCouponRow = {
 export type AdminNavItem = {
   id: AdminNavId
   label: string
-  group: 'geral' | 'operacao' | 'engajamento' | 'sistema'
-  ready?: boolean
+  group: 'geral' | 'engajamento'
 }
 
 export const adminNavGroups: { id: AdminNavItem['group']; label: string }[] = [
   { id: 'geral', label: 'Geral' },
-  { id: 'operacao', label: 'Operação' },
   { id: 'engajamento', label: 'Engajamento' },
-  { id: 'sistema', label: 'Sistema' },
 ]
 
 export const adminNavItems: AdminNavItem[] = [
-  { id: 'overview', label: 'Visão Geral', group: 'geral', ready: true },
-  { id: 'users', label: 'Usuários', group: 'geral' },
-  { id: 'deposits', label: 'Depósitos', group: 'operacao' },
-  { id: 'withdrawals', label: 'Saques', group: 'operacao' },
-  { id: 'reports', label: 'Relatórios', group: 'operacao' },
-  { id: 'rewards', label: 'Recompensas', group: 'engajamento', ready: true },
-  { id: 'campaigns', label: 'Campanhas', group: 'engajamento', ready: true },
-  { id: 'missions', label: 'Missões', group: 'engajamento', ready: true },
-  { id: 'coupons', label: 'Cupons', group: 'engajamento', ready: true },
-  { id: 'prizes', label: 'Prêmios', group: 'engajamento' },
-  { id: 'contents', label: 'Conteúdos', group: 'sistema' },
-  { id: 'notifications', label: 'Notificações', group: 'sistema' },
-  { id: 'settings', label: 'Configurações', group: 'sistema' },
+  { id: 'overview', label: 'Visão Geral', group: 'geral' },
+  { id: 'rewards', label: 'Recompensas', group: 'engajamento' },
+  { id: 'campaigns', label: 'Sorteios', group: 'engajamento' },
+  { id: 'draw', label: 'Novo sorteio', group: 'engajamento' },
+  { id: 'missions', label: 'Missões', group: 'engajamento' },
+  { id: 'coupons', label: 'Cupons', group: 'engajamento' },
 ]
+
+export function adminSectionPath(id: AdminNavId): string {
+  return id === 'overview' ? '/administrador' : `/administrador?section=${id}`
+}
+
+export function parseAdminSection(value: string | null | undefined): AdminNavId {
+  if (!value) return 'overview'
+  const match = adminNavItems.find((item) => item.id === value)
+  return match?.id ?? 'overview'
+}
 
 export const adminProfile = {
   name: 'Pedro Henrique',
@@ -161,8 +137,8 @@ export const adminProfile = {
 
 export const adminOverview = {
   title: 'Visão Geral',
-  lead: 'Acompanhe o desempenho da plataforma em tempo real.',
-  dateRange: '01/09/2026 → 17/09/2026',
+  lead: 'Acompanhe o desempenho operacional da plataforma.',
+  eyebrow: 'Admin',
   chartPeriod: 'Últimos 17 dias',
 }
 
@@ -310,49 +286,6 @@ export const adminAccountStatusLabel: Record<AdminRecentUser['accountStatus'], s
   pending: 'Pendente',
   blocked: 'Bloqueado',
 }
-
-export const adminFeed: AdminFeedItem[] = [
-  {
-    id: 'f1',
-    date: '17/09 14:22',
-    action: 'deposit',
-    actionLabel: 'Depósito',
-    details: 'R$ 1.000,00',
-    userId: '#48291',
-  },
-  {
-    id: 'f2',
-    date: '17/09 13:58',
-    action: 'prize',
-    actionLabel: 'Prêmio entregue',
-    details: 'iPhone 15 Pro Max',
-    userId: '#48102',
-  },
-  {
-    id: 'f3',
-    date: '17/09 12:41',
-    action: 'withdraw',
-    actionLabel: 'Saque',
-    details: 'R$ 450,00',
-    userId: '#47955',
-  },
-  {
-    id: 'f4',
-    date: '17/09 11:15',
-    action: 'signup',
-    actionLabel: 'Novo cadastro',
-    details: 'Conta verificada',
-    userId: '#48290',
-  },
-  {
-    id: 'f5',
-    date: '17/09 10:03',
-    action: 'coupon',
-    actionLabel: 'Cupom usado',
-    details: 'BULL150',
-    userId: '#47820',
-  },
-]
 
 export const adminCampaignCards: AdminCampaignCard[] = [
   {
@@ -593,18 +526,31 @@ export const adminTrackLabel: Record<AdminRewardRow['track'], string> = {
 
 export const adminSectionTitles: Record<
   Exclude<AdminNavId, 'overview'>,
-  { title: string; lead: string }
+  { title: string; lead: string; eyebrow: string }
 > = {
-  users: { title: 'Usuários', lead: 'Gestão de contas e status na plataforma.' },
-  deposits: { title: 'Depósitos', lead: 'Movimentações de entrada e conciliação.' },
-  withdrawals: { title: 'Saques', lead: 'Solicitações e fluxo de saída.' },
-  rewards: { title: 'Recompensas', lead: 'Itens do passe gratuito e premium.' },
-  campaigns: { title: 'Campanhas', lead: 'Banners, sorteios e destaques ativos.' },
-  missions: { title: 'Missões', lead: 'Desafios da temporada BullStart.' },
-  coupons: { title: 'Cupons', lead: 'Códigos promocionais e regras de uso.' },
-  prizes: { title: 'Prêmios', lead: 'Entregas e estoque de prêmios físicos.' },
-  contents: { title: 'Conteúdos', lead: 'Materiais e publicações do app.' },
-  notifications: { title: 'Notificações', lead: 'Push e comunicados em massa.' },
-  reports: { title: 'Relatórios', lead: 'Exportações e indicadores avançados.' },
-  settings: { title: 'Configurações', lead: 'Preferências do painel administrativo.' },
+  rewards: {
+    title: 'Recompensas',
+    lead: 'Gerencie os benefícios das trilhas BullPass e Premium.',
+    eyebrow: 'Engajamento',
+  },
+  campaigns: {
+    title: 'Sorteios',
+    lead: 'Histórico de sorteios e gerenciamento de banners da temporada.',
+    eyebrow: 'Engajamento',
+  },
+  draw: {
+    title: 'Novo sorteio',
+    lead: 'Configure o prêmio, confira os elegíveis e realize o sorteio com chances iguais.',
+    eyebrow: 'Engajamento',
+  },
+  missions: {
+    title: 'Missões',
+    lead: 'Defina metas, pontos e períodos da temporada.',
+    eyebrow: 'Engajamento',
+  },
+  coupons: {
+    title: 'Cupons',
+    lead: 'Publique códigos promocionais e regras de uso.',
+    eyebrow: 'Engajamento',
+  },
 }

@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  adminNavGroups,
+  adminNavItems,
+  adminSectionPath,
+  parseAdminSection,
+  type AdminNavId,
+} from '../../data/adminMock'
 import { navItems } from '../../data/missionsMock'
+import { AdminNavIcon } from '../admin/AdminSidebar'
 
 const MOBILE_QUERY = '(max-width: 1100px)'
 
@@ -81,7 +89,7 @@ export function AppSidebar() {
 
   useEffect(() => {
     setMobileOpen(false)
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   if (isMobile) {
     return (
@@ -169,6 +177,16 @@ function NavLinks({
   return (
     <>
       {navItems.map((item) => {
+        if (item.id === 'administrador') {
+          return (
+            <AdminMenuDropdown
+              key={item.id}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
+          )
+        }
+
         const isActive = isNavActive(pathname, item.id)
 
         return (
@@ -193,10 +211,104 @@ function NavLinks({
   )
 }
 
+function AdminMenuDropdown({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string
+  onNavigate?: () => void
+}) {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const activeSection = parseAdminSection(searchParams.get('section'))
+  const onAdmin = pathname.startsWith('/administrador')
+  const [open, setOpen] = useState(onAdmin)
+  const menuId = useId()
+
+  useEffect(() => {
+    if (onAdmin) setOpen(true)
+  }, [onAdmin])
+
+  function handleToggle() {
+    setOpen((current) => {
+      const next = !current
+      if (next && !onAdmin) navigate('/administrador')
+      return next
+    })
+  }
+
+  return (
+    <div className={`bs-sidebar__admin${open ? ' is-open' : ''}${onAdmin ? ' is-active' : ''}`}>
+      <button
+        type="button"
+        className={`bs-sidebar__link bs-sidebar__admin-trigger${onAdmin ? ' is-active' : ''}`}
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={handleToggle}
+      >
+        <span className="bs-sidebar__icon" aria-hidden="true">
+          <NavIcon id="administrador" />
+        </span>
+        <span>Administrador</span>
+        <span className="bs-sidebar__admin-chevron" aria-hidden="true">
+          <AdminChevronIcon />
+        </span>
+      </button>
+
+      <div
+        id={menuId}
+        className="bs-sidebar__admin-menu"
+        role="group"
+        aria-label="Seções administrativas"
+        aria-hidden={!open}
+        inert={!open ? true : undefined}
+      >
+        <div className="bs-sidebar__admin-menu-inner">
+          {adminNavGroups.map((group) => {
+            const items = adminNavItems.filter((item) => item.group === group.id)
+            return (
+              <div key={group.id} className="bs-sidebar__admin-group">
+                <p className="bs-sidebar__admin-label">{group.label}</p>
+                {items.map((item) => {
+                  const isActive = onAdmin && activeSection === item.id
+
+                  return (
+                    <Link
+                      key={item.id}
+                      to={adminSectionPath(item.id)}
+                      className={`bs-sidebar__admin-item${isActive ? ' is-active' : ''}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      tabIndex={open ? undefined : -1}
+                      onClick={onNavigate}
+                    >
+                      <span className="bs-sidebar__admin-item-icon" aria-hidden="true">
+                        <AdminNavIcon id={item.id} />
+                      </span>
+                      <span>{item.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CloseIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function AdminChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="m7 10 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

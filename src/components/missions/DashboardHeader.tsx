@@ -1,5 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { DRAW_STORAGE_KEY, type AdminDraw } from '../../data/drawAdminMock'
+import {
+  dismissDrawWinNotification,
+  getPendingDrawWinForTrader,
+  reloadDrawStoreFromStorage,
+} from '../../services/bullstartDraw'
+import { DrawWinnerCelebration } from './DrawWinnerCelebration'
 
 /** Header logado — dados estáticos no MVP (futuro: API/banco). */
 const STATIC_USER = {
@@ -7,6 +14,8 @@ const STATIC_USER = {
   id: '482917',
   avatarSrc: '/media/avatar-gabriel.jpg',
 } as const
+
+const PLAYER_ROUTES = ['/missoes', '/recompensas', '/historico', '/suporte'] as const
 
 const MENU_ITEMS = [
   { id: 'profile', label: 'Meu perfil', action: 'placeholder' },
@@ -43,11 +52,45 @@ type OpenPanel = 'profile' | 'notifications' | null
 
 export function DashboardHeader() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
+  const [pendingWin, setPendingWin] = useState<AdminDraw | null>(null)
   const profileMenuId = useId()
   const notificationsMenuId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const unreadCount = STATIC_NOTIFICATIONS.filter((item) => item.unread).length
+  const onPlayerRoute = PLAYER_ROUTES.some((route) => location.pathname.startsWith(route))
+
+  useEffect(() => {
+    if (!onPlayerRoute) {
+      setPendingWin(null)
+      return
+    }
+
+    function refreshPendingWin() {
+      reloadDrawStoreFromStorage()
+      setPendingWin(getPendingDrawWinForTrader(STATIC_USER.id))
+    }
+
+    refreshPendingWin()
+
+    function onStorage(event: StorageEvent) {
+      if (event.key === DRAW_STORAGE_KEY || event.key === null) {
+        refreshPendingWin()
+      }
+    }
+
+    function onFocus() {
+      refreshPendingWin()
+    }
+
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [onPlayerRoute, location.pathname])
 
   useEffect(() => {
     if (!openPanel) return
@@ -199,6 +242,17 @@ export function DashboardHeader() {
 
         <span id="bs-topbar-burger-slot" className="bs-topbar__burger-slot" />
       </div>
+
+      {pendingWin ? (
+        <DrawWinnerCelebration
+          draw={pendingWin}
+          traderId={STATIC_USER.id}
+          onClose={() => {
+            dismissDrawWinNotification(pendingWin.id, STATIC_USER.id)
+            setPendingWin(null)
+          }}
+        />
+      ) : null}
     </header>
   )
 }

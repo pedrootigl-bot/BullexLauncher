@@ -1,5 +1,5 @@
-﻿/* =========================================================
-   BULLSTART MISSIONS â€” layout only (Bullex dashboard)
+/* =========================================================
+   BULLSTART MISSIONS ? layout only (Bullex dashboard)
    ========================================================= */
 
 .bs-shell {
@@ -504,6 +504,152 @@ html.bs-sidebar-collapsed .bs-shell__body {
   color: #0a1200;
 }
 
+.bs-sidebar__admin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.bs-sidebar__admin-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.bs-sidebar__admin-trigger.is-active {
+  color: var(--bs-green);
+  background: rgba(158, 255, 0, 0.1);
+  box-shadow: none;
+}
+
+.bs-sidebar__admin-chevron {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  opacity: 0.75;
+  transition: transform 0.22s ease;
+}
+
+.bs-sidebar__admin.is-open .bs-sidebar__admin-chevron {
+  transform: rotate(180deg);
+}
+
+.bs-sidebar__admin-menu {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin: 0 0 0 0.85rem;
+  padding: 0;
+  border-left: 1px solid transparent;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease,
+    margin 0.28s ease,
+    padding 0.28s ease;
+}
+
+.bs-sidebar__admin-menu-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.bs-sidebar__admin.is-open .bs-sidebar__admin-menu {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  padding: 0.35rem 0 0.45rem 0.55rem;
+  margin: 0 0 0.25rem 0.85rem;
+  border-left-color: rgba(158, 255, 0, 0.18);
+}
+
+.bs-sidebar__admin.is-open .bs-sidebar__admin-group {
+  animation: bs-admin-menu-item-in 0.28s ease both;
+}
+
+.bs-sidebar__admin.is-open .bs-sidebar__admin-group:nth-child(1) {
+  animation-delay: 0.04s;
+}
+
+.bs-sidebar__admin.is-open .bs-sidebar__admin-group:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+@keyframes bs-admin-menu-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bs-sidebar__admin-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.bs-sidebar__admin-label {
+  margin: 0 0 0.15rem;
+  padding: 0 0.55rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(158, 255, 0, 0.72);
+}
+
+.bs-sidebar__admin-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.05rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 10px;
+  color: var(--bs-muted);
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bs-sidebar__admin-item:hover {
+  color: var(--bs-text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bs-sidebar__admin-item.is-active {
+  color: #0a1200;
+  background: var(--bs-green);
+}
+
+.bs-sidebar__admin-item-icon {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.bs-sidebar__admin-item-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
 .bs-sidebar__promo {
   display: flex;
   gap: 0.7rem;
@@ -549,7 +695,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   min-height: 0;
 }
 
-/* â€”â€” BullStart section shell â€”â€” */
+/* ?? BullStart section shell ?? */
 .bs-bullstart {
   display: flex;
   flex-direction: column;
@@ -630,7 +776,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   gap: 1.15rem;
 }
 
-/* â€”â€” Start hero (inÃ­cio) â€”â€” */
+/* ?? Start hero (in�cio) ?? */
 .bs-start-hero {
   --bs-hero-green-soft: #d4ff7a;
   --bs-hero-green-deep: #5cad00;
@@ -794,7 +940,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   color: var(--bs-green);
 }
 
-/* â€”â€” Start info cards (inÃ­cio) â€”â€” */
+/* ?? Start info cards (in�cio) ?? */
 .bs-info-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1423,7 +1569,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   margin: 0;
 }
 
-/* â€”â€” Level up modal â€”â€” */
+/* ?? Level up modal ?? */
 .bs-levelup {
   position: fixed;
   inset: 0;
@@ -1777,7 +1923,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   }
 }
 
-/* â€”â€” History page â€”â€” */
+/* ?? History page ?? */
 .bs-history {
   gap: 1.35rem;
   position: relative;
@@ -2264,7 +2410,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   color: var(--bs-green);
 }
 
-/* â€”â€” Mission complete modal (100%) â€”â€” */
+/* ?? Mission complete modal (100%) ?? */
 .bs-complete {
   position: fixed;
   inset: 0;
@@ -2593,7 +2739,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   }
 }
 
-/* â€”â€” Reward claim modal (gamified) â€”â€” */
+/* ?? Reward claim modal (gamified) ?? */
 .bs-modal {
   position: fixed;
   inset: 0;
@@ -3292,7 +3438,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
   }
 }
 
-/* â€”â€” Promo carousel (section prÃ³pria, full-bleed) â€”â€” */
+/* ?? Promo carousel (section pr�pria, full-bleed) ?? */
 .bs-promo {
   margin: 0;
 }
@@ -4879,7 +5025,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
 }
 
 /* =========================================================
-   RECOMPENSAS â€” CUPONS
+   RECOMPENSAS ? CUPONS
    ========================================================= */
 
 .sr-only {
@@ -6098,7 +6244,7 @@ html.bs-sidebar-collapsed .bs-shell__body {
 }
 
 /* =========================================================
-   LAYOUT REFS — Rewards / History / Support extensions
+   LAYOUT REFS ? Rewards / History / Support extensions
    ========================================================= */
 
 .bs-rewards__reco {
@@ -6908,67 +7054,6 @@ html.bs-sidebar-collapsed .bs-shell__body {
   padding: 0.4rem 0.7rem;
 }
 
-.bs-support-faq__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-
-.bs-support-faq__search {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-width: min(240px, 100%);
-  padding: 0.5rem 0.75rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.28);
-  color: var(--bs-muted);
-}
-
-.bs-support-faq__search input {
-  flex: 1;
-  border: 0;
-  background: transparent;
-  color: #fff;
-  font: inherit;
-  outline: none;
-}
-
-.bs-support-faq__cats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-.bs-support-faq__cats button {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--bs-muted);
-  font: inherit;
-  font-size: 0.74rem;
-  font-weight: 700;
-  padding: 0.35rem 0.7rem;
-  cursor: pointer;
-}
-
-.bs-support-faq__cats button.is-active {
-  border-color: rgba(158, 255, 0, 0.4);
-  background: rgba(158, 255, 0, 0.12);
-  color: var(--bs-green);
-}
-
-.bs-support-faq__empty {
-  margin: 0.75rem 0 0;
-  color: var(--bs-muted);
-  font-size: 0.86rem;
-}
-
 .bs-support-cta-panel {
   display: flex;
   flex-direction: column;
@@ -7071,3 +7156,171 @@ html.bs-sidebar-collapsed .bs-shell__body {
   }
 }
 
+
+/* ---------- Popup ganhador do sorteio ---------- */
+
+.bs-draw-win {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(2, 6, 3, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.bs-draw-win__dialog {
+  width: min(440px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(158, 255, 0, 0.28);
+  background:
+    linear-gradient(160deg, rgba(158, 255, 0, 0.1) 0%, transparent 42%),
+    linear-gradient(180deg, #121a13 0%, #0a100c 100%);
+  padding: 1.55rem 1.4rem 1.4rem;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  animation: bs-draw-win-in 0.28s ease-out;
+}
+
+@keyframes bs-draw-win-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bs-draw-win__eyebrow {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(158, 255, 0, 0.88);
+}
+
+.bs-draw-win__dialog h2 {
+  margin: 0.4rem 0 0;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: clamp(1.55rem, 3vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.bs-draw-win__lead {
+  margin: 0.65rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #9aa49c;
+}
+
+.bs-draw-win__lead strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.bs-draw-win__prize {
+  margin-top: 1.15rem;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.bs-draw-win__media {
+  min-height: 96px;
+  background: #060a07;
+}
+
+.bs-draw-win__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bs-draw-win__prize-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.85rem 0.9rem 0.85rem 0;
+}
+
+.bs-draw-win__prize-copy span {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a948c;
+}
+
+.bs-draw-win__prize-copy strong {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.bs-draw-win__prize-copy em {
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8a948c;
+}
+
+.bs-draw-win__note {
+  margin: 1rem 0 0;
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #8a948c;
+}
+
+.bs-draw-win__cta {
+  margin-top: 1.2rem;
+  width: 100%;
+  min-height: 2.85rem;
+  border: 0;
+  border-radius: 12px;
+  background: #9eff00;
+  color: #061000;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 0 22px rgba(158, 255, 0, 0.25);
+}
+
+.bs-draw-win__cta:hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 520px) {
+  .bs-draw-win__prize {
+    grid-template-columns: 1fr;
+  }
+
+  .bs-draw-win__prize-copy {
+    padding: 0 0.95rem 0.95rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bs-draw-win__dialog {
+    animation: none;
+  }
+}

@@ -1,11 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import {
-  AdminDateRangePicker,
-  chartPeriodLabel,
-  parseBrDateRange,
-  type DateRangeValue,
-} from '../components/admin/AdminDateRangePicker'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { AdminActionMenu } from '../components/admin/AdminActionMenu'
+import { AdminEmptyState } from '../components/admin/AdminEmptyState'
+import { AdminKpiCard } from '../components/admin/AdminKpiCard'
 import { AdminOverview } from '../components/admin/AdminOverview'
+import { AdminPageHeader } from '../components/admin/AdminPageHeader'
+import { BullstartDrawPanel } from '../components/admin/BullstartDrawPanel'
+import { getRewardTypeMeta } from '../components/admin/rewardTypeMeta'
+import { StatusBadge } from '../components/admin/StatusBadge'
 import { AppSidebar } from '../components/missions/AppSidebar'
 import { DashboardHeader } from '../components/missions/DashboardHeader'
 import {
@@ -17,27 +19,23 @@ import {
   adminCampaignCards,
   adminCouponStatusLabel,
   adminCoupons,
-  adminKpis,
   adminMissionStatusLabel,
   adminMissions,
-  adminNavGroups,
-  adminNavItems,
   adminOverview,
   adminPassRewards,
+  adminSectionPath,
   adminSectionTitles,
   adminTrackLabel,
+  parseAdminSection,
   type AdminCampaignCard,
   type AdminCouponRow,
   type AdminMissionRow,
   type AdminNavId,
   type AdminRewardRow,
 } from '../data/adminMock'
-
-const INITIAL_DATE_RANGE: DateRangeValue =
-  parseBrDateRange(adminOverview.dateRange) ?? {
-    start: new Date(2026, 8, 1),
-    end: new Date(2026, 8, 17),
-  }
+import { formatBullstartDateTime } from '../services/bullstartAdmin'
+import { listDrawHistory } from '../services/bullstartDraw'
+import type { AdminDraw } from '../data/drawAdminMock'
 
 type AdminModalState = {
   kind: AdminCreateKind
@@ -46,27 +44,25 @@ type AdminModalState = {
   entityId?: string
 }
 
-const MANAGEABLE: AdminNavId[] = ['missions', 'rewards', 'coupons', 'campaigns']
-
 export function AdminPage() {
-  const [section, setSection] = useState<AdminNavId>('overview')
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const section = parseAdminSection(searchParams.get('section'))
   const [modal, setModal] = useState<AdminModalState | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [missions, setMissions] = useState<AdminMissionRow[]>(() => [...adminMissions])
   const [campaigns, setCampaigns] = useState<AdminCampaignCard[]>(() => [...adminCampaignCards])
-  const [dateRange, setDateRange] = useState<DateRangeValue>(INITIAL_DATE_RANGE)
-  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [rewards, setRewards] = useState<AdminRewardRow[]>(() => [...adminPassRewards])
+  const [campaignsTab, setCampaignsTab] = useState<'history' | 'banners'>('history')
+  const [historyTick, setHistoryTick] = useState(0)
 
-  const periodLabel = useMemo(() => chartPeriodLabel(dateRange), [dateRange])
+  function setSection(id: AdminNavId) {
+    navigate(adminSectionPath(id))
+  }
 
   function showToast(message: string) {
     setToast(message)
     window.setTimeout(() => setToast(null), 2400)
-  }
-
-  function handleApplyDateRange(range: DateRangeValue) {
-    setDateRange(range)
-    showToast(`Período filtrado: ${chartPeriodLabel(range).toLowerCase()}.`)
   }
 
   function openCreate(kind: AdminCreateKind) {
@@ -186,7 +182,7 @@ export function AdminPage() {
 
     return {
       id: base?.id ?? `c-${Date.now()}`,
-      title: payload.title?.trim() || 'Nova campanha',
+      title: payload.title?.trim() || 'Novo sorteio',
       image,
       status: base?.status ?? 'active',
       startsAt: payload.startsAt?.trim() || '—',
@@ -195,7 +191,40 @@ export function AdminPage() {
       progress: base?.progress ?? 0,
       priority: Number(payload.priority) || base?.priority || 1,
       ctaUrl: payload.ctaUrl?.trim() || '/missoes',
-      altText: payload.altText?.trim() || payload.title?.trim() || 'Banner de campanha',
+      altText: payload.altText?.trim() || payload.title?.trim() || 'Banner de sorteio',
+    }
+  }
+
+  function applyPassPayload(
+    payload: Record<string, string>,
+    base?: AdminRewardRow,
+  ): AdminRewardRow {
+    const track = payload.track === 'premium' ? 'premium' : 'free'
+    const kind = (
+      [
+        'cashback',
+        'points',
+        'ticket',
+        'chest',
+        'report',
+        'balance',
+        'badge',
+        'bonus',
+      ] as AdminRewardRow['kind'][]
+    ).includes(payload.kind as AdminRewardRow['kind'])
+      ? (payload.kind as AdminRewardRow['kind'])
+      : 'cashback'
+
+    return {
+      id: base?.id ?? `r-${Date.now()}`,
+      title: payload.title?.trim() || 'Nova recompensa',
+      track,
+      level: Number(payload.level) || base?.level || 1,
+      kind,
+      claims: base?.claims ?? 0,
+      amount: payload.amount?.trim() || '0',
+      unitLabel: payload.unitLabel?.trim() || 'R$',
+      eligibility: payload.eligibility?.trim() || 'Benefício digital do passe',
     }
   }
 
@@ -228,19 +257,35 @@ export function AdminPage() {
       }
     }
 
+    if (kind === 'pass') {
+      const nextReward = applyPassPayload(
+        payload,
+        mode === 'edit' && modal?.entityId
+          ? rewards.find((reward) => reward.id === modal.entityId)
+          : undefined,
+      )
+      if (mode === 'edit' && modal?.entityId) {
+        setRewards((current) =>
+          current.map((reward) => (reward.id === modal.entityId ? nextReward : reward)),
+        )
+      } else {
+        setRewards((current) => [nextReward, ...current])
+      }
+    }
+
     setModal(null)
 
     const createMessages: Record<AdminCreateKind, string> = {
       mission: 'Missão criada com sucesso.',
       pass: 'Recompensa adicionada ao passe (mock).',
       coupon: 'Cupom gerado com sucesso (mock).',
-      campaign: 'Campanha publicada.',
+      campaign: 'Sorteio publicado.',
     }
     const editMessages: Record<AdminCreateKind, string> = {
       mission: 'Missão atualizada.',
       pass: 'Recompensa atualizada (mock).',
       coupon: 'Cupom atualizado (mock).',
-      campaign: 'Campanha atualizada.',
+      campaign: 'Sorteio atualizado.',
     }
 
     showToast(mode === 'edit' ? editMessages[kind] : createMessages[kind])
@@ -260,10 +305,63 @@ export function AdminPage() {
     setSection('missions')
   }
 
-  const header =
+  const isEngage =
+    section === 'missions' ||
+    section === 'rewards' ||
+    section === 'coupons' ||
+    section === 'campaigns' ||
+    section === 'draw'
+
+  const headerMeta =
     section === 'overview'
-      ? { title: adminOverview.title, lead: adminOverview.lead }
+      ? {
+          title: adminOverview.title,
+          lead: adminOverview.lead,
+          eyebrow: adminOverview.eyebrow,
+        }
       : adminSectionTitles[section]
+
+  const breadcrumb =
+    section === 'overview'
+      ? [
+          { label: 'Admin', to: '/administrador' },
+          { label: 'Visão Geral' },
+        ]
+      : [
+          { label: 'Admin', to: '/administrador' },
+          { label: 'Engajamento', to: adminSectionPath(section) },
+          { label: headerMeta.title },
+        ]
+
+  void historyTick
+  const drawHistory = listDrawHistory()
+
+  const headerActions =
+    section === 'rewards' ? (
+      <button type="button" className="bx-btn bx-btn--primary" onClick={() => openCreate('pass')}>
+        + Nova recompensa
+      </button>
+    ) : section === 'draw' ? (
+      <Link className="bx-btn bx-btn--secondary" to={adminSectionPath('campaigns')}>
+        Ver histórico →
+      </Link>
+    ) : section === 'campaigns' && campaignsTab === 'banners' ? (
+      <button type="button" className="bx-btn bx-btn--primary" onClick={() => openCreate('campaign')}>
+        + Novo banner
+      </button>
+    ) : section === 'campaigns' ? (
+      <Link className="bx-btn bx-btn--primary" to={adminSectionPath('draw')}>
+        Novo sorteio →
+      </Link>
+    ) : section === 'missions' ? (
+      <button type="button" className="bx-btn bx-btn--primary" onClick={() => openCreate('mission')}>
+        + Nova missão
+      </button>
+    ) : section === 'coupons' ? (
+      <button type="button" className="bx-btn bx-btn--primary" onClick={() => openCreate('coupon')}>
+        + Novo cupom
+      </button>
+    ) : null
 
   return (
     <div className="bs-shell">
@@ -272,65 +370,21 @@ export function AdminPage() {
       <div className="bs-shell__body">
         <AppSidebar />
 
-        <div className="bs-main bx-admin">
-          <header className="bx-admin__top">
-            <div className="bx-admin__top-copy">
-              <p className="bx-admin__eyebrow">Painel Bullex</p>
-              <h1>{header.title}</h1>
-              <p>{header.lead}</p>
-            </div>
-
-            <div className="bx-admin__top-tools">
-              <div className="bx-admin__quick-kpis" aria-label="Resumo rápido">
-                {adminKpis.slice(0, 2).map((kpi) => (
-                  <article key={kpi.id}>
-                    <span>{kpi.label}</span>
-                    <strong>{kpi.value}</strong>
-                  </article>
-                ))}
-              </div>
-              <AdminDateRangePicker
-                value={dateRange}
-                open={datePickerOpen}
-                onOpenChange={setDatePickerOpen}
-                onApply={handleApplyDateRange}
-              />
-            </div>
-          </header>
+        <div className={`bs-main bx-admin${isEngage ? ' bx-admin--engage' : ''}`}>
+          <AdminPageHeader
+            compact
+            eyebrow={headerMeta.eyebrow}
+            title={headerMeta.title}
+            lead={headerMeta.lead}
+            breadcrumb={breadcrumb}
+            actions={headerActions}
+          />
 
           <div className="bx-admin__body">
-            <nav className="bx-admin-sections" aria-label="Seções do painel">
-              {adminNavGroups.map((group) => {
-                const items = adminNavItems.filter((item) => item.group === group.id)
-                return (
-                  <div key={group.id} className="bx-admin-sections__group">
-                    <p className="bx-admin-sections__label">{group.label}</p>
-                    {items.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`bx-admin-sections__chip${section === item.id ? ' is-active' : ''}${item.ready ? '' : ' is-soon'}`}
-                        aria-pressed={section === item.id}
-                        onClick={() => setSection(item.id)}
-                      >
-                        <span className="bx-admin-sections__icon" aria-hidden="true">
-                          <AdminSectionIcon id={item.id} />
-                        </span>
-                        <span className="bx-admin-sections__text">{item.label}</span>
-                        {!item.ready ? <em>Em breve</em> : null}
-                      </button>
-                    ))}
-                  </div>
-                )
-              })}
-            </nav>
-
             <div className="bx-admin__content">
               {section === 'overview' ? (
                 <AdminOverview
                   campaigns={campaigns}
-                  chartPeriod={periodLabel}
-                  dateRange={dateRange}
                   onOpenCampaigns={() => setSection('campaigns')}
                 />
               ) : null}
@@ -338,61 +392,90 @@ export function AdminPage() {
               {section === 'missions' ? (
                 <ManagePanel
                   title="Missões da temporada"
-                  lead="Crie, edite e acompanhe conclusões."
-                  onCreate={() => openCreate('mission')}
-                  createLabel="+ Nova missão"
+                  lead="Crie, edite e acompanhe as conclusões dos traders."
                 >
                   <MissionsTable missions={missions} onEdit={openEditMission} />
                 </ManagePanel>
               ) : null}
 
               {section === 'rewards' ? (
-                <ManagePanel
-                  title="Recompensas do passe"
-                  lead="Itens das trilhas BullPass e BullPass Premium."
+                <RewardsHub
+                  rewards={rewards}
+                  onEdit={openEditPass}
                   onCreate={() => openCreate('pass')}
-                  createLabel="+ Nova recompensa"
-                >
-                  <PassTable onEdit={openEditPass} />
-                </ManagePanel>
+                  onDuplicate={(reward) => {
+                    setRewards((current) => [
+                      {
+                        ...reward,
+                        id: `r-${Date.now()}`,
+                        title: `${reward.title} (cópia)`,
+                        claims: 0,
+                        level: reward.level + 1,
+                      },
+                      ...current,
+                    ])
+                    showToast('Recompensa duplicada (mock).')
+                  }}
+                  onDeactivate={(reward) => {
+                    showToast(`Recompensa “${reward.title}” marcada para desativação (mock).`)
+                  }}
+                  onDelete={(reward) => {
+                    setRewards((current) => current.filter((item) => item.id !== reward.id))
+                    showToast('Recompensa removida (mock).')
+                  }}
+                />
               ) : null}
 
               {section === 'coupons' ? (
                 <ManagePanel
                   title="Cupons promocionais"
                   lead="Códigos ativos, pausados e expirados."
-                  onCreate={() => openCreate('coupon')}
-                  createLabel="+ Novo cupom"
                 >
                   <CouponsTable onEdit={openEditCoupon} />
                 </ManagePanel>
               ) : null}
 
               {section === 'campaigns' ? (
-                <ManagePanel
-                  title="Campanhas ativas"
-                  lead="Banners, ordem no carrossel e progresso das campanhas da temporada."
-                  onCreate={() => openCreate('campaign')}
-                  createLabel="+ Nova campanha"
-                >
-                  <CampaignsManage campaigns={campaigns} onEdit={openEditCampaign} />
-                </ManagePanel>
+                <div className="bx-sorteios-hub">
+                  <div className="bx-admin-tabs" role="tablist" aria-label="Áreas de sorteios">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={campaignsTab === 'history'}
+                      className={campaignsTab === 'history' ? 'is-active' : undefined}
+                      onClick={() => setCampaignsTab('history')}
+                    >
+                      Histórico de sorteios
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={campaignsTab === 'banners'}
+                      className={campaignsTab === 'banners' ? 'is-active' : undefined}
+                      onClick={() => setCampaignsTab('banners')}
+                    >
+                      Banners
+                    </button>
+                  </div>
+
+                  {campaignsTab === 'history' ? (
+                    <DrawHistoryPanel
+                      draws={drawHistory}
+                      onRefresh={() => setHistoryTick((n) => n + 1)}
+                    />
+                  ) : (
+                    <ManagePanel
+                      title="Banners ativos"
+                      lead="Ordem no carrossel e progresso visual da temporada."
+                    >
+                      <CampaignsManage campaigns={campaigns} onEdit={openEditCampaign} />
+                    </ManagePanel>
+                  )}
+                </div>
               ) : null}
 
-              {section !== 'overview' && !MANAGEABLE.includes(section) ? (
-                <div className="bx-admin-placeholder">
-                  <span className="bx-admin-placeholder__icon" aria-hidden="true">
-                    <AdminSectionIcon id={section} />
-                  </span>
-                  <strong>{header.title}</strong>
-                  <p>
-                    Este módulo ainda está em construção. A estrutura já está pronta para receber
-                    dados reais da operação Bullex.
-                  </p>
-                  <button type="button" className="bx-admin-link" onClick={() => setSection('overview')}>
-                    Voltar à visão geral →
-                  </button>
-                </div>
+              {section === 'draw' ? (
+                <BullstartDrawPanel onHistoryChange={() => setHistoryTick((n) => n + 1)} />
               ) : null}
             </div>
           </div>
@@ -405,7 +488,7 @@ export function AdminPage() {
           kind={modal.kind}
           mode={modal.mode}
           initialValues={modal.initialValues}
-          occupiedKeys={adminPassRewards
+          occupiedKeys={rewards
             .filter((reward) => reward.id !== modal.entityId)
             .map((reward) => `${reward.track}-${reward.level}`)}
           onClose={() => setModal(null)}
@@ -426,28 +509,21 @@ export function AdminPage() {
 function ManagePanel({
   title,
   lead,
-  onCreate,
-  createLabel,
   children,
 }: {
   title: string
   lead: string
-  onCreate: () => void
-  createLabel: string
   children: ReactNode
 }) {
   return (
-    <section className="bx-admin-panel bx-admin-panel--manage">
-      <div className="bx-admin-panel__head">
-        <div>
+    <section className="bx-admin-panel bx-admin-panel--manage bx-admin-engage">
+      <div className="bx-admin-engage__head">
+        <div className="bx-admin-engage__copy">
           <h2>{title}</h2>
           <p>{lead}</p>
         </div>
-        <button type="button" className="bx-admin-add" onClick={onCreate}>
-          {createLabel}
-        </button>
       </div>
-      {children}
+      <div className="bx-admin-engage__body">{children}</div>
     </section>
   )
 }
@@ -460,7 +536,11 @@ function MissionsTable({
   onEdit: (mission: AdminMissionRow) => void
 }) {
   return (
-    <div className="bx-admin-table bx-admin-table--manage" role="table" aria-label="Missões">
+    <div
+      className="bx-admin-table bx-admin-table--manage bx-admin-table--missions"
+      role="table"
+      aria-label="Missões"
+    >
       <div className="bx-admin-table__head" role="row">
         <span role="columnheader">Missão</span>
         <span role="columnheader">Status</span>
@@ -476,7 +556,7 @@ function MissionsTable({
       ) : null}
       {missions.map((mission) => (
         <div key={mission.id} className="bx-admin-table__row" role="row">
-          <span role="cell">
+          <span role="cell" className="bx-admin-table__entity">
             <strong>{mission.title}</strong>
             <em className="bx-admin-table__sub">{mission.ctaLabel}</em>
           </span>
@@ -485,9 +565,13 @@ function MissionsTable({
               {adminMissionStatusLabel[mission.status]}
             </em>
           </span>
-          <span role="cell">{mission.completions.toLocaleString('pt-BR')}</span>
-          <span role="cell">+{mission.points}</span>
-          <span role="cell">
+          <span role="cell" className="bx-admin-table__num">
+            {mission.completions.toLocaleString('pt-BR')}
+          </span>
+          <span role="cell" className="bx-admin-table__points">
+            +{mission.points}
+          </span>
+          <span role="cell" className="bx-admin-table__period">
             {mission.startsAt} → {mission.endsAt}
           </span>
           <span role="cell" className="bx-admin-table__actions">
@@ -501,52 +585,303 @@ function MissionsTable({
   )
 }
 
-function PassTable({ onEdit }: { onEdit: (reward: AdminRewardRow) => void }) {
+function RewardsHub({
+  rewards,
+  onEdit,
+  onCreate,
+  onDuplicate,
+  onDeactivate,
+  onDelete,
+}: {
+  rewards: AdminRewardRow[]
+  onEdit: (reward: AdminRewardRow) => void
+  onCreate: () => void
+  onDuplicate: (reward: AdminRewardRow) => void
+  onDeactivate: (reward: AdminRewardRow) => void
+  onDelete: (reward: AdminRewardRow) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [track, setTrack] = useState<'all' | AdminRewardRow['track']>('all')
+  const [kind, setKind] = useState<'all' | AdminRewardRow['kind']>('all')
+
+  const kpis = useMemo(() => {
+    const free = rewards.filter((item) => item.track === 'free').length
+    const premium = rewards.filter((item) => item.track === 'premium').length
+    const claims = rewards.reduce((sum, item) => sum + item.claims, 0)
+    const top = rewards.slice().sort((a, b) => b.claims - a.claims)[0]
+    return {
+      active: rewards.length,
+      free,
+      premium,
+      claims,
+      topTitle: top?.title ?? '—',
+    }
+  }, [rewards])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return rewards.filter((reward) => {
+      const matchesTrack = track === 'all' || reward.track === track
+      const matchesKind = kind === 'all' || reward.kind === kind
+      const matchesQuery =
+        !q ||
+        reward.title.toLowerCase().includes(q) ||
+        reward.kind.toLowerCase().includes(q) ||
+        reward.eligibility.toLowerCase().includes(q)
+      return matchesTrack && matchesKind && matchesQuery
+    })
+  }, [rewards, query, track, kind])
+
+  const kinds = useMemo(
+    () => Array.from(new Set(rewards.map((reward) => reward.kind))),
+    [rewards],
+  )
+
   return (
-    <div className="bx-admin-table bx-admin-table--manage" role="table" aria-label="Recompensas">
-      <div className="bx-admin-table__head" role="row">
-        <span role="columnheader">Recompensa</span>
-        <span role="columnheader">Trilha</span>
-        <span role="columnheader">Nível</span>
-        <span role="columnheader">Resgates</span>
-        <span role="columnheader">Elegibilidade</span>
-        <span role="columnheader" className="sr-only">
-          Ações
-        </span>
+    <section className="bx-admin-panel bx-admin-panel--manage bx-rewards-hub">
+      <div className="bx-rewards-hub__kpis" aria-label="Resumo de recompensas">
+        <AdminKpiCard label="Recompensas ativas" value={String(kpis.active)} />
+        <AdminKpiCard label="BullPass" value={String(kpis.free)} />
+        <AdminKpiCard label="Premium" value={String(kpis.premium)} tone="premium" />
+        <AdminKpiCard label="Resgates" value={kpis.claims.toLocaleString('pt-BR')} />
+        <AdminKpiCard label="Mais resgatada" value={kpis.topTitle} hint="Por volume de resgates" />
       </div>
-      {adminPassRewards.length === 0 ? (
-        <p className="bx-admin-empty">Nenhuma recompensa no passe. Adicione a primeira.</p>
-      ) : null}
-      {adminPassRewards.map((reward) => (
-        <div key={reward.id} className="bx-admin-table__row" role="row">
-          <span role="cell">
-            <strong>{reward.title}</strong>
-            <em className="bx-admin-table__sub">
-              {reward.amount} {reward.unitLabel}
-            </em>
-          </span>
-          <span role="cell">
-            <span className={`bx-admin-track bx-admin-track--${reward.track}`}>
-              {adminTrackLabel[reward.track]}
-            </span>
-          </span>
-          <span role="cell">Nv. {reward.level}</span>
-          <span role="cell">{reward.claims.toLocaleString('pt-BR')}</span>
-          <span role="cell">{reward.eligibility}</span>
-          <span role="cell" className="bx-admin-table__actions">
-            <button type="button" onClick={() => onEdit(reward)}>
-              Editar
-            </button>
-          </span>
+
+      <div className="bx-admin-engage__head">
+        <div className="bx-admin-engage__copy">
+          <h2>Recompensas do Passe</h2>
+          <p>Gerencie os benefícios das trilhas BullPass e Premium.</p>
         </div>
-      ))}
-    </div>
+      </div>
+
+      <div className="bx-rewards-hub__tools">
+        <label className="bx-admin-search">
+          <span className="sr-only">Buscar recompensa</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar recompensa..."
+          />
+        </label>
+        <label>
+          <span className="sr-only">Trilha</span>
+          <select value={track} onChange={(event) => setTrack(event.target.value as typeof track)}>
+            <option value="all">Todas as trilhas</option>
+            <option value="free">BullPass</option>
+            <option value="premium">Premium</option>
+          </select>
+        </label>
+        <label>
+          <span className="sr-only">Tipo</span>
+          <select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}>
+            <option value="all">Todos os tipos</option>
+            {kinds.map((item) => (
+              <option key={item} value={item}>
+                {getRewardTypeMeta(item).label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {filtered.length === 0 ? (
+        <AdminEmptyState
+          title="Nenhuma recompensa encontrada."
+          description="Crie um benefício para começar a montar o BullPass."
+          action={
+            <button type="button" className="bx-btn bx-btn--primary" onClick={onCreate}>
+              + Criar recompensa
+            </button>
+          }
+        />
+      ) : (
+        <div
+          className="bx-admin-table bx-admin-table--manage bx-admin-table--rewards"
+          role="table"
+          aria-label="Recompensas"
+        >
+          <div className="bx-admin-table__head" role="row">
+            <span role="columnheader">Recompensa</span>
+            <span role="columnheader">Tipo</span>
+            <span role="columnheader">Trilha</span>
+            <span role="columnheader">Nível</span>
+            <span role="columnheader">Resgates</span>
+            <span role="columnheader">Validade</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader" className="sr-only">
+              Ações
+            </span>
+          </div>
+          {filtered.map((reward) => {
+            const typeMeta = getRewardTypeMeta(reward.kind)
+            return (
+              <div key={reward.id} className="bx-admin-table__row" role="row">
+                <span role="cell" className="bx-admin-table__entity">
+                  <strong>{reward.title}</strong>
+                  <em className="bx-admin-table__sub">
+                    {reward.amount} {reward.unitLabel}
+                  </em>
+                </span>
+                <span role="cell">
+                  <span className={`bx-reward-type is-${typeMeta.tone}`}>{typeMeta.label}</span>
+                </span>
+                <span role="cell">
+                  <span className={`bx-admin-track bx-admin-track--${reward.track}`}>
+                    {adminTrackLabel[reward.track]}
+                  </span>
+                </span>
+                <span role="cell" className="bx-admin-table__level">
+                  Nv. {reward.level}
+                </span>
+                <span role="cell" className="bx-admin-table__num">
+                  {reward.claims.toLocaleString('pt-BR')}
+                </span>
+                <span role="cell" className="bx-admin-table__eligibility">
+                  {reward.eligibility}
+                </span>
+                <span role="cell">
+                  <StatusBadge label="Ativa" tone="active" />
+                </span>
+                <span role="cell" className="bx-admin-table__actions">
+                  <AdminActionMenu
+                    items={[
+                      { id: 'edit', label: 'Editar', onSelect: () => onEdit(reward) },
+                      { id: 'dup', label: 'Duplicar', onSelect: () => onDuplicate(reward) },
+                      {
+                        id: 'view',
+                        label: 'Visualizar',
+                        onSelect: () => onEdit(reward),
+                      },
+                      {
+                        id: 'off',
+                        label: 'Desativar',
+                        onSelect: () => onDeactivate(reward),
+                      },
+                      {
+                        id: 'del',
+                        label: 'Excluir',
+                        tone: 'danger',
+                        onSelect: () => onDelete(reward),
+                      },
+                    ]}
+                  />
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function DrawHistoryPanel({
+  draws,
+  onRefresh,
+}: {
+  draws: AdminDraw[]
+  onRefresh: () => void
+}) {
+  const [statusFilter, setStatusFilter] = useState<'all' | 'prepared' | 'completed'>('all')
+
+  const filtered = draws.filter(
+    (draw) => statusFilter === 'all' || draw.status === statusFilter,
+  )
+
+  return (
+    <section className="bx-admin-panel bx-admin-panel--manage">
+      <div className="bx-admin-engage__head">
+        <div className="bx-admin-engage__copy">
+          <h2>Histórico de sorteios</h2>
+          <p>Resultados permanentes e sorteios preparados.</p>
+        </div>
+        <div className="bx-page-header__actions">
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as typeof statusFilter)
+            }
+            aria-label="Filtrar status"
+          >
+            <option value="all">Todos</option>
+            <option value="prepared">Preparados</option>
+            <option value="completed">Concluídos</option>
+          </select>
+          <button type="button" className="bx-btn bx-btn--ghost" onClick={onRefresh}>
+            Atualizar
+          </button>
+          <Link className="bx-btn bx-btn--secondary" to={adminSectionPath('draw')}>
+            Novo sorteio →
+          </Link>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <AdminEmptyState
+          title="Nenhum sorteio realizado ainda."
+          description="Prepare um sorteio na seção Novo sorteio para registrar o histórico."
+          action={
+            <Link className="bx-btn bx-btn--primary" to={adminSectionPath('draw')}>
+              Abrir novo sorteio
+            </Link>
+          }
+        />
+      ) : (
+        <div className="bx-admin-table bx-draw-history-table" role="table" aria-label="Histórico">
+          <div className="bx-admin-table__head" role="row">
+            <span role="columnheader">Sorteio</span>
+            <span role="columnheader">Campanha</span>
+            <span role="columnheader">Prêmio</span>
+            <span role="columnheader">Participantes</span>
+            <span role="columnheader">Vencedor</span>
+            <span role="columnheader">Data</span>
+            <span role="columnheader">Status</span>
+          </div>
+          {filtered.map((draw) => (
+            <div key={draw.id} className="bx-admin-table__row" role="row">
+              <span role="cell">
+                <strong>{draw.code}</strong>
+              </span>
+              <span role="cell">{draw.seasonLabel}</span>
+              <span role="cell">
+                {draw.prizeUnits > 1 ? `${draw.prizeUnits}× ` : ''}
+                {draw.prizeName}
+              </span>
+              <span role="cell">{draw.participantCount}</span>
+              <span role="cell">
+                {draw.winners.length > 0
+                  ? draw.winners.map((winner) => winner.name).join(', ')
+                  : draw.winnerName ?? '—'}
+              </span>
+              <span role="cell">
+                {draw.drawnAt
+                  ? formatBullstartDateTime(draw.drawnAt)
+                  : draw.preparedAt
+                    ? formatBullstartDateTime(draw.preparedAt)
+                    : '—'}
+              </span>
+              <span role="cell">
+                <StatusBadge
+                  label={draw.status === 'completed' ? 'Concluído' : 'Preparado'}
+                  tone={draw.status === 'completed' ? 'completed' : 'prepared'}
+                />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
 function CouponsTable({ onEdit }: { onEdit: (coupon: AdminCouponRow) => void }) {
   return (
-    <div className="bx-admin-table bx-admin-table--manage" role="table" aria-label="Cupons">
+    <div
+      className="bx-admin-table bx-admin-table--manage bx-admin-table--coupons"
+      role="table"
+      aria-label="Cupons"
+    >
       <div className="bx-admin-table__head" role="row">
         <span role="columnheader">Cupom</span>
         <span role="columnheader">Código</span>
@@ -562,7 +897,10 @@ function CouponsTable({ onEdit }: { onEdit: (coupon: AdminCouponRow) => void }) 
       ) : null}
       {adminCoupons.map((coupon) => (
         <div key={coupon.id} className="bx-admin-table__row" role="row">
-          <strong role="cell">{coupon.name}</strong>
+          <span role="cell" className="bx-admin-table__entity">
+            <strong>{coupon.name}</strong>
+            <em className="bx-admin-table__sub">{coupon.valueLabel}</em>
+          </span>
           <span role="cell">
             <code>{coupon.code}</code>
           </span>
@@ -571,7 +909,7 @@ function CouponsTable({ onEdit }: { onEdit: (coupon: AdminCouponRow) => void }) 
               {adminCouponStatusLabel[coupon.status]}
             </em>
           </span>
-          <span role="cell">
+          <span role="cell" className="bx-admin-table__usage">
             <strong>
               {coupon.redemptions}/{coupon.limit}
             </strong>
@@ -579,7 +917,7 @@ function CouponsTable({ onEdit }: { onEdit: (coupon: AdminCouponRow) => void }) 
               <i style={{ width: `${Math.min(100, (coupon.redemptions / coupon.limit) * 100)}%` }} />
             </span>
           </span>
-          <span role="cell">
+          <span role="cell" className="bx-admin-table__rules">
             <em className="bx-admin-table__sub">
               Mín. R$ {coupon.minDeposit}
               {coupon.onePerUser ? ' · 1/usuário' : ''}
@@ -618,13 +956,13 @@ function CampaignsManage({
 
   return (
     <div className="bx-admin-campaigns-manage">
-      <div className="bx-admin-campaigns__stats" aria-label="Resumo das campanhas">
+      <div className="bx-admin-campaigns__stats" aria-label="Resumo dos sorteios">
         <article>
-          <span>Ativas</span>
+          <span>Ativos</span>
           <strong>{activeCount}</strong>
         </article>
         <article>
-          <span>Pausadas</span>
+          <span>Pausados</span>
           <strong>{pausedCount}</strong>
         </article>
         <article>
@@ -639,160 +977,48 @@ function CampaignsManage({
 
       <div className="bx-admin-campaigns__grid bx-admin-campaigns__grid--manage">
         {campaigns.length === 0 ? (
-          <p className="bx-admin-empty">Nenhuma campanha cadastrada.</p>
+          <p className="bx-admin-empty">Nenhum sorteio cadastrado.</p>
         ) : null}
         {campaigns
           .slice()
           .sort((a, b) => a.priority - b.priority)
           .map((campaign) => (
-          <article key={campaign.id} className="bx-admin-campaign bx-admin-campaign--manage">
-            <div className="bx-admin-campaign__media">
-              <img src={campaign.image} alt={campaign.altText} />
-              <span
-                className={`bx-admin-badge bx-admin-badge--${
-                  campaign.status === 'active' ? 'active' : 'paused'
-                }`}
-              >
-                {campaign.status === 'active' ? 'Ativa' : 'Pausada'}
-              </span>
-              <span className="bx-admin-campaign__order">#{campaign.priority}</span>
-            </div>
-            <div className="bx-admin-campaign__body">
-              <strong>{campaign.title}</strong>
-              <div className="bx-admin-campaign__meta">
-                <span>
-                  {campaign.startsAt} → {campaign.endsAt}
+            <article key={campaign.id} className="bx-admin-campaign bx-admin-campaign--manage">
+              <div className="bx-admin-campaign__media">
+                <img src={campaign.image} alt={campaign.altText} />
+                <span
+                  className={`bx-admin-badge bx-admin-badge--${
+                    campaign.status === 'active' ? 'active' : 'paused'
+                  }`}
+                >
+                  {campaign.status === 'active' ? 'Ativo' : 'Pausado'}
                 </span>
-                <b>{campaign.progress}%</b>
+                <span className="bx-admin-campaign__order">#{campaign.priority}</span>
               </div>
-              <p className="bx-admin-campaign__cta">CTA: {campaign.ctaUrl}</p>
-              <div className="bx-admin-campaign__progress" aria-hidden="true">
-                <span style={{ width: `${campaign.progress}%` }} />
+              <div className="bx-admin-campaign__body">
+                <strong>{campaign.title}</strong>
+                <div className="bx-admin-campaign__meta">
+                  <span>
+                    {campaign.startsAt} → {campaign.endsAt}
+                  </span>
+                  <b>{campaign.progress}%</b>
+                </div>
+                <p className="bx-admin-campaign__cta">CTA · {campaign.ctaUrl}</p>
+                <div className="bx-admin-campaign__progress" aria-hidden="true">
+                  <span style={{ width: `${campaign.progress}%` }} />
+                </div>
+                <button
+                  type="button"
+                  className="bx-admin-campaign__edit"
+                  onClick={() => onEdit(campaign)}
+                >
+                  Editar sorteio
+                </button>
               </div>
-              <button
-                type="button"
-                className="bx-admin-campaign__edit"
-                onClick={() => onEdit(campaign)}
-              >
-                Editar campanha
-              </button>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))}
       </div>
     </div>
   )
 }
 
-function AdminSectionIcon({ id }: { id: AdminNavId }) {
-  const props = {
-    viewBox: '0 0 24 24',
-    width: 15,
-    height: 15,
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.7,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  }
-
-  switch (id) {
-    case 'overview':
-      return (
-        <svg {...props}>
-          <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
-          <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
-          <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
-          <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
-        </svg>
-      )
-    case 'users':
-      return (
-        <svg {...props}>
-          <circle cx="9" cy="8" r="3" />
-          <path d="M3.5 19c1.2-3 3.2-4.5 5.5-4.5S13.3 16 14.5 19" />
-          <circle cx="16.5" cy="9" r="2.4" />
-          <path d="M15 14.5c1.8.3 3.3 1.5 4.2 3.5" />
-        </svg>
-      )
-    case 'deposits':
-      return (
-        <svg {...props}>
-          <path d="M12 4v12M8 8l4-4 4 4" />
-          <path d="M5 18h14" />
-        </svg>
-      )
-    case 'withdrawals':
-      return (
-        <svg {...props}>
-          <path d="M12 20V8M8 16l4 4 4-4" />
-          <path d="M5 6h14" />
-        </svg>
-      )
-    case 'rewards':
-      return (
-        <svg {...props}>
-          <path d="M12 3 14.5 8.5 20.5 9.2 16 13.4 17.2 19.3 12 16.4 6.8 19.3 8 13.4 3.5 9.2 9.5 8.5 12 3Z" />
-        </svg>
-      )
-    case 'campaigns':
-      return (
-        <svg {...props}>
-          <rect x="3" y="6" width="18" height="12" rx="2" />
-          <path d="M3 10h18" />
-        </svg>
-      )
-    case 'missions':
-      return (
-        <svg {...props}>
-          <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" />
-          <path d="M12 13v3M9 20h6" />
-        </svg>
-      )
-    case 'coupons':
-      return (
-        <svg {...props}>
-          <path d="M4 9.5A2.5 2.5 0 0 0 6.5 7h11A2.5 2.5 0 0 0 20 9.5v1a1.5 1.5 0 0 1 0 3v1A2.5 2.5 0 0 0 17.5 17h-11A2.5 2.5 0 0 0 4 14.5v-1a1.5 1.5 0 0 1 0-3v-1Z" />
-          <path d="M12 7v10" strokeDasharray="2 2" />
-        </svg>
-      )
-    case 'prizes':
-      return (
-        <svg {...props}>
-          <path d="M8 10h8v10H8z" />
-          <path d="M7 10h10l-1-4H8l-1 4Z" />
-        </svg>
-      )
-    case 'contents':
-      return (
-        <svg {...props}>
-          <rect x="5" y="4" width="14" height="16" rx="2" />
-          <path d="M9 9h6M9 13h6M9 17h4" />
-        </svg>
-      )
-    case 'notifications':
-      return (
-        <svg {...props}>
-          <path d="M6 16h12l-1.2-2.2a5.5 5.5 0 0 1-.8-2.8V9a4 4 0 1 0-8 0v1.9c0 1-.3 2-.8 2.9L6 16Z" />
-          <path d="M10 18a2 2 0 0 0 4 0" />
-        </svg>
-      )
-    case 'reports':
-      return (
-        <svg {...props}>
-          <path d="M4 19V9M10 19V5M16 19v-7M20 19V11" />
-        </svg>
-      )
-    case 'settings':
-      return (
-        <svg {...props}>
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6" />
-        </svg>
-      )
-    default: {
-      const _exhaustive: never = id
-      return _exhaustive
-    }
-  }
-}

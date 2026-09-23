@@ -59,12 +59,12 @@ const MODAL_COPY: Record<
     editSubmit: 'Salvar alterações',
   },
   campaign: {
-    eyebrow: 'Campanha',
-    createTitle: 'Configurar campanha',
-    editTitle: 'Editar campanha',
+    eyebrow: 'Sorteio',
+    createTitle: 'Configurar sorteio',
+    editTitle: 'Editar sorteio',
     createLead: 'Atualize banner, título, ordem e CTA na home.',
-    editLead: 'Ajuste a campanha selecionada e o banner.',
-    createSubmit: 'Publicar campanha',
+    editLead: 'Ajuste o sorteio selecionado e o banner.',
+    createSubmit: 'Publicar sorteio',
     editSubmit: 'Salvar alterações',
   },
 }
@@ -174,9 +174,13 @@ export function AdminCreateModal({
   const submitLabel = isEdit ? copy.editSubmit : copy.createSubmit
 
   return (
-    <div className="bs-admin-modal" role="presentation" onClick={onClose}>
+    <div
+      className={`bs-admin-modal${kind === 'pass' ? ' bs-admin-modal--drawer' : ''}`}
+      role="presentation"
+      onClick={onClose}
+    >
       <div
-        className="bs-admin-modal__dialog"
+        className={`bs-admin-modal__dialog${kind === 'pass' ? ' bs-admin-modal__dialog--drawer' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bs-admin-modal-title"
@@ -498,7 +502,7 @@ export function AdminCreateModal({
           {kind === 'campaign' ? (
             <>
               <Field
-                label="Título da campanha"
+                label="Título do sorteio"
                 name="title"
                 value={values.title}
                 onChange={updateField}
@@ -561,7 +565,7 @@ export function AdminCreateModal({
                 required
               />
               <p className="bs-admin-modal__hint">
-                Todos os banners de campanha são publicados na posição <strong>Home</strong>.
+                Todos os banners de sorteio são publicados na posição <strong>Home</strong>.
               </p>
             </>
           ) : null}
@@ -670,7 +674,7 @@ function ImageUploadField({
 }) {
   return (
     <div className="bs-admin-modal__field">
-      <span>Banner da campanha</span>
+      <span>Banner do sorteio</span>
       <label className={`bs-admin-upload${previewUrl ? ' has-file' : ''}`}>
         <input
           type="file"
