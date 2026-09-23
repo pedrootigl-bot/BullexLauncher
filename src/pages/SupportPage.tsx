@@ -2,17 +2,12 @@ import { useState } from 'react'
 import { AppSidebar } from '../components/missions/AppSidebar'
 import { DashboardHeader } from '../components/missions/DashboardHeader'
 import { LiveChatModal } from '../components/missions/LiveChatModal'
-import {
-  supportChannels,
-  supportFaqs,
-  supportIntro,
-  supportSpecialist,
-  supportTiles,
-  type SupportChannelId,
-  type SupportTile,
-} from '../data/supportMock'
+import { useResource } from '../hooks/useResource'
+import { createSupportTicket, fetchSupportDashboard } from '../services/support'
+import type { SupportChannelId, SupportTile } from '../data/supportMock'
 
 export function SupportPage() {
+  const { data, loading, error } = useResource(fetchSupportDashboard, [])
   const [openFaqId, setOpenFaqId] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState(false)
 
@@ -27,7 +22,13 @@ export function SupportPage() {
         return
       }
       case 'ticket':
-        console.log('suporte channel', id)
+        void createSupportTicket({
+          subject: 'Atendimento Bullex',
+          category: 'Geral',
+          message: 'Solicitação aberta pela página de suporte.',
+        }).then((ticket) => {
+          console.log('ticket criado', ticket.id)
+        })
         return
       default: {
         const _exhaustive: never = id
@@ -35,6 +36,22 @@ export function SupportPage() {
       }
     }
   }
+
+  if (loading || !data) {
+    return (
+      <div className="bs-shell">
+        <DashboardHeader />
+        <div className="bs-shell__body">
+          <AppSidebar />
+          <div className="bs-main bs-support">
+            <p>{error ? `Erro: ${error}` : 'Carregando suporte…'}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const { intro: supportIntro, tiles: supportTiles, channels: supportChannels, faqs: supportFaqs, specialist: supportSpecialist } = data
 
   return (
     <div className="bs-shell">

@@ -1,3 +1,6 @@
+import { api } from '../api/client'
+import { shouldUseMocks } from '../api/config'
+import { endpoints } from '../api/endpoints'
 import { adminProfile } from '../data/adminMock'
 import { isCurrentUserAdmin } from '../utils/adminAccess'
 import {
@@ -15,6 +18,7 @@ import {
   type BullstartSeasonId,
 } from '../data/bullstartAdminMock'
 import { getBullstartEligible, type BullstartEligibleRow } from './bullstartAdmin'
+import { getCurrentUser } from './auth'
 
 type DrawStore = {
   prizes: DrawPrize[]
@@ -232,6 +236,13 @@ export type CreateDrawPrizeInput = {
   seasonId?: BullstartSeasonId | null
 }
 
+export async function createDrawPrizeAsync(input: CreateDrawPrizeInput): Promise<DrawPrize> {
+  if (!shouldUseMocks()) {
+    return api.post<DrawPrize>(endpoints.admin.draws.prizes, input)
+  }
+  return createDrawPrize(input)
+}
+
 export function createDrawPrize(input: CreateDrawPrizeInput): DrawPrize {
   const store = getStore()
   const name = input.name.trim()
@@ -277,11 +288,17 @@ export function getDraw(drawId: string): AdminDraw | null {
   return draw ? { ...draw } : null
 }
 
-export function updateDrawWinnerDelivery(
+export async function updateDrawWinnerDelivery(
   drawId: string,
   userId: string,
   deliveryStatus: AdminDrawWinner['deliveryStatus'],
-): AdminDraw {
+): Promise<AdminDraw> {
+  if (!shouldUseMocks()) {
+    return api.patch<AdminDraw>(endpoints.admin.draws.winnerDelivery(drawId, userId), {
+      deliveryStatus,
+    })
+  }
+
   if (!isCurrentUserAdmin()) {
     throw new Error('Apenas administradores podem atualizar a entrega do prêmio.')
   }
@@ -325,6 +342,10 @@ export type PrepareDrawInput = {
 }
 
 export async function prepareDraw(input: PrepareDrawInput): Promise<AdminDraw> {
+  if (!shouldUseMocks()) {
+    return api.post<AdminDraw>(endpoints.admin.draws.prepare, input)
+  }
+
   const store = getStore()
   const existingPrepared = store.draws.find(
     (item) => item.seasonId === input.seasonId && item.status === 'prepared',
@@ -424,6 +445,10 @@ export type ExecuteDrawResult = {
 }
 
 export async function executeDraw(drawId: string): Promise<ExecuteDrawResult> {
+  if (!shouldUseMocks()) {
+    return api.post<ExecuteDrawResult>(endpoints.admin.draws.execute(drawId), {})
+  }
+
   if (executingDrawIds.has(drawId)) {
     throw new Error('Sorteio já em andamento. Aguarde a conclusão.')
   }
@@ -594,4 +619,48 @@ export function dismissDrawWinNotification(drawId: string, traderId?: string): v
 /** Força releitura do store a partir do localStorage (ex.: outra aba admin sorteou). */
 export function reloadDrawStoreFromStorage(): void {
   memoryStore = loadStore()
+}
+
+/** ——— Loaders HTTP (API) / mock ——— */
+
+export async function loadDrawPrizes(seasonId?: BullstartSeasonId): Promise<DrawPrize[]> {
+  if (shouldUseMocks()) return listDrawPrizes(seasonId)
+  return api.get<DrawPrize[]>(endpoints.admin.draws.prizes, {
+    query: { seasonId, available: true },
+  })
+}
+
+export async function loadAllDrawPrizes(): Promise<DrawPrize[]> {
+  if (shouldUseMocks()) return listAllDrawPrizes()
+  return api.get<DrawPrize[]>(endpoints.admin.draws.prizes)
+}
+
+export async function loadDrawHistory(seasonId?: BullstartSeasonId): Promise<AdminDraw[]> {
+  if (shouldUseMocks()) return listDrawHistory(seasonId)
+  return api.get<AdminDraw[]>(endpoints.admin.draws.list, { query: { seasonId } })
+}
+
+export async function loadDraw(drawId: string): Promise<AdminDraw | null> {
+  if (shouldUseMocks()) return getDraw(drawId)
+  return api.get<AdminDraw | null>(endpoints.admin.draws.one(drawId))
+}
+
+export async function loadDrawParticipants(drawId: string): Promise<AdminDrawParticipant[]> {
+  if (shouldUseMocks()) return getDrawParticipants(drawId)
+  return api.get<AdminDrawParticipant[]>(endpoints.admin.draws.participants(drawId))
+}
+
+export async function loadPendingDrawWin(): Promise<AdminDraw | null> {
+  if (shouldUseMocks()) {
+    return getPendingDrawWinForTrader(getCurrentUser().traderId)
+  }
+  return api.get<AdminDraw | null>(endpoints.me.drawWinPending)
+}
+
+export async function ackDrawWin(drawId: string): Promise<void> {
+  if (shouldUseMocks()) {
+    dismissDrawWinNotification(drawId, getCurrentUser().traderId)
+    return
+  }
+  await api.post(endpoints.me.drawWinAck(drawId), {})
 }

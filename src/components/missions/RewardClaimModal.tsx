@@ -9,7 +9,7 @@ type RewardClaimModalProps = {
 }
 
 const CONFETTI = [
-  { x: -18, y: -92, rot: -28, delay: 0.62, size: 'rect', color: 'a' },
+  { x: -18, y: -92, rot: -28, delay: 0.62, shape: 'rect', color: 'a' },
   { x: 22, y: -98, rot: 35, delay: 0.66, shape: 'rect', color: 'b' },
   { x: -42, y: -78, rot: -55, delay: 0.7, shape: 'circle', color: 'c' },
   { x: 48, y: -84, rot: 48, delay: 0.72, shape: 'circle', color: 'a' },

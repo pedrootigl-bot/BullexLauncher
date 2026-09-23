@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   historyQuote,
   historyStatusLabel,
-  mockHistoryPrizes,
-  mockHistoryStats,
   type HistoryPrize,
   type HistoryStatus,
 } from '../data/historyMock'
 import { AppSidebar } from '../components/missions/AppSidebar'
 import { DashboardHeader } from '../components/missions/DashboardHeader'
+import { useResource } from '../hooks/useResource'
+import { fetchHistoryDashboard } from '../services/history'
 
 type StatusFilter = 'all' | HistoryStatus
 
@@ -20,37 +20,59 @@ const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
 ]
 
 export function HistoryPage() {
+  const { data, loading, error } = useResource(fetchHistoryDashboard, [])
+  const allPrizes = data?.prizes ?? []
+  const stats = data?.stats
+
   const [filter, setFilter] = useState<StatusFilter>('all')
-  const [selectedId, setSelectedId] = useState(
-    mockHistoryPrizes.find((item) => item.status === 'delivered')?.id ?? mockHistoryPrizes[0]?.id ?? '',
-  )
+  const [selectedId, setSelectedId] = useState('')
   const [toast, setToast] = useState<string | null>(null)
-  const stats = mockHistoryStats
+
+  useEffect(() => {
+    if (!data) return
+    setSelectedId(
+      data.prizes.find((item) => item.status === 'delivered')?.id ?? data.prizes[0]?.id ?? '',
+    )
+  }, [data])
 
   const prizes = useMemo(() => {
-    if (filter === 'all') return mockHistoryPrizes
-    return mockHistoryPrizes.filter((item) => item.status === filter)
-  }, [filter])
+    if (filter === 'all') return allPrizes
+    return allPrizes.filter((item) => item.status === filter)
+  }, [filter, allPrizes])
 
   const filterCounts = useMemo(
     () => ({
-      all: mockHistoryPrizes.length,
-      used: mockHistoryPrizes.filter((item) => item.status === 'used').length,
-      shipped: mockHistoryPrizes.filter((item) => item.status === 'shipped').length,
-      delivered: mockHistoryPrizes.filter((item) => item.status === 'delivered').length,
+      all: allPrizes.length,
+      used: allPrizes.filter((item) => item.status === 'used').length,
+      shipped: allPrizes.filter((item) => item.status === 'shipped').length,
+      delivered: allPrizes.filter((item) => item.status === 'delivered').length,
     }),
-    [],
+    [allPrizes],
   )
 
   const selected =
     prizes.find((item) => item.id === selectedId) ??
-    mockHistoryPrizes.find((item) => item.id === selectedId) ??
+    allPrizes.find((item) => item.id === selectedId) ??
     prizes[0] ??
     null
 
   function handleExport() {
     setToast('Histórico exportado (mock).')
     window.setTimeout(() => setToast(null), 2200)
+  }
+
+  if (loading || !stats) {
+    return (
+      <div className="bs-shell">
+        <DashboardHeader />
+        <div className="bs-shell__body">
+          <AppSidebar />
+          <div className="bs-main">
+            <p>{error ? `Erro: ${error}` : 'Carregando histórico…'}</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -169,8 +191,8 @@ export function HistoryPage() {
                       setFilter(option.value)
                       const list =
                         option.value === 'all'
-                          ? mockHistoryPrizes
-                          : mockHistoryPrizes.filter((item) => item.status === option.value)
+                          ? allPrizes
+                          : allPrizes.filter((item) => item.status === option.value)
                       setSelectedId(list[0]?.id ?? '')
                     }}
                   >

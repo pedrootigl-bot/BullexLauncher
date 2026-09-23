@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowIcon, EyeIcon, EyeOffIcon } from '../components/Icons'
+import { useSession } from '../context/SessionContext'
+import { toErrorMessage } from '../api/errors'
 
 const FEATURES = [
   { id: 'skills', label: 'Desenvolva suas habilidades' },
@@ -30,18 +32,39 @@ const ATMOSPHERE_WORDS = ['Disciplina', 'Foco', 'Evolução', 'Resultados'] as c
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const { login } = useSession()
   const [bullexId, setBullexId] = useState('482917')
   const [password, setPassword] = useState('password')
   const [remember, setRemember] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    navigate('/missoes')
+    setError(null)
+    setBusy(true)
+    try {
+      await login({ bullexId, password, remember })
+      navigate('/missoes')
+    } catch (err) {
+      setError(toErrorMessage(err, 'Não foi possível entrar. Verifique ID e senha.'))
+    } finally {
+      setBusy(false)
+    }
   }
 
-  function goCreateAccount() {
-    navigate('/missoes')
+  async function goCreateAccount() {
+    setError(null)
+    setBusy(true)
+    try {
+      await login({ bullexId: bullexId || '482917', password: password || 'password', remember })
+      navigate('/missoes')
+    } catch (err) {
+      setError(toErrorMessage(err, 'Não foi possível continuar.'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -161,14 +184,20 @@ export function LoginPage() {
               <a href="#recuperar">Esqueceu sua senha?</a>
             </div>
 
-            <button type="submit" className="bx-login-card__submit">
-              Acessar minhas missões
+            {error ? (
+              <p role="alert" style={{ color: '#ff8a8a', margin: '0 0 0.75rem', fontSize: '0.9rem' }}>
+                {error}
+              </p>
+            ) : null}
+
+            <button type="submit" className="bx-login-card__submit" disabled={busy}>
+              {busy ? 'Entrando…' : 'Acessar minhas missões'}
               <ArrowIcon />
             </button>
 
             <p className="bx-login-card__signup">
               Ainda não tem uma conta?{' '}
-              <button type="button" onClick={goCreateAccount}>
+              <button type="button" onClick={() => void goCreateAccount()} disabled={busy}>
                 Criar conta
               </button>
             </p>

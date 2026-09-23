@@ -73,11 +73,11 @@ export function DrawPrizeDetailModal({
   const drawDate = draw.drawnAt ?? draw.preparedAt
   const canEditDelivery = draw.status === 'completed'
 
-  function handleStatusChange(winner: AdminDrawWinner, status: DeliveryStatus) {
+  async function handleStatusChange(winner: AdminDrawWinner, status: DeliveryStatus) {
     if (!winner.userId) return
     setError(null)
     try {
-      const updated = updateDrawWinnerDelivery(draw.id, winner.userId, status)
+      const updated = await updateDrawWinnerDelivery(draw.id, winner.userId, status)
       setDraw(updated)
       onUpdated?.(updated)
     } catch (err) {

@@ -1,3 +1,6 @@
+import { api } from '../api/client'
+import { shouldUseMocks } from '../api/config'
+import { endpoints } from '../api/endpoints'
 import {
   DEFAULT_BULLSTART_SEASON_ID,
   bullstartDeposits,
@@ -491,4 +494,50 @@ export function downloadEligibleCsv(rows: BullstartEligibleRow[], filename = 'bu
 function csvEscape(value: string): string {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
   return value
+}
+
+/** ——— Loaders HTTP (API) / mock ——— */
+
+export async function loadBullstartSeasons(): Promise<BullstartSeason[]> {
+  if (shouldUseMocks()) return listBullstartSeasons()
+  return api.get<BullstartSeason[]>(endpoints.admin.bullstart.seasons)
+}
+
+export async function loadBullstartOverview(
+  filters: BullstartOverviewFilters,
+): Promise<BullstartOverview> {
+  if (shouldUseMocks()) return getBullstartOverview(filters)
+  return api.get<BullstartOverview>(endpoints.admin.bullstart.overview, {
+    query: {
+      seasonId: filters.seasonId,
+      periodStart: filters.periodStart,
+      periodEnd: filters.periodEnd,
+    },
+  })
+}
+
+export async function loadBullstartEligible(query: EligibleQuery): Promise<BullstartEligibleRow[]> {
+  if (shouldUseMocks()) return getBullstartEligible(query)
+  return api.get<BullstartEligibleRow[]>(endpoints.admin.bullstart.eligible, {
+    query: {
+      seasonId: query.seasonId,
+      periodStart: query.periodStart,
+      periodEnd: query.periodEnd,
+      status: query.status,
+      sortBy: query.sortBy,
+      sortDir: query.sortDir,
+      search: query.search,
+    },
+  })
+}
+
+export async function loadBullstartEligibleDetail(
+  seasonId: BullstartSeasonId,
+  userId: string,
+): Promise<BullstartEligibleDetail | null> {
+  if (shouldUseMocks()) return getBullstartEligibleDetail(seasonId, userId)
+  return api.get<BullstartEligibleDetail | null>(
+    endpoints.admin.bullstart.eligibleDetail(userId),
+    { query: { seasonId } },
+  )
 }

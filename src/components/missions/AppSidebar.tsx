@@ -6,7 +6,6 @@ import {
   adminNavItems,
   adminSectionPath,
   parseAdminSection,
-  type AdminNavId,
 } from '../../data/adminMock'
 import { navItems } from '../../data/missionsMock'
 import { isCurrentUserAdmin } from '../../utils/adminAccess'

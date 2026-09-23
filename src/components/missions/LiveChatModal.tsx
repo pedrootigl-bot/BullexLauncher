@@ -1,12 +1,13 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { mockUser } from '../../data/missionsMock'
+import { useSession } from '../../context/SessionContext'
 import {
-  supportChatAutoReplies,
-  supportChatSeed,
-  supportSpecialist,
-  type SupportChatMessage,
-} from '../../data/supportMock'
+  fetchChatMessages,
+  getMockChatAutoReply,
+  sendChatMessage,
+} from '../../services/support'
+import { supportSpecialist, type SupportChatMessage } from '../../data/supportMock'
+import { shouldUseMocks } from '../../api/config'
 
 type LiveChatModalProps = {
   open: boolean
@@ -19,10 +20,16 @@ export function LiveChatModal({ open, onClose }: LiveChatModalProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const replyTimerRef = useRef<number | null>(null)
   const replyIndexRef = useRef(0)
+  const { user } = useSession()
 
-  const [messages, setMessages] = useState<SupportChatMessage[]>(() => [...supportChatSeed])
+  const [messages, setMessages] = useState<SupportChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [agentTyping, setAgentTyping] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    void fetchChatMessages().then(setMessages)
+  }, [open])
 
   useEffect(() => {
     if (!open) return undefined
@@ -62,12 +69,11 @@ export function LiveChatModal({ open, onClose }: LiveChatModalProps) {
   }
 
   function scheduleAgentReply() {
+    if (!shouldUseMocks()) return
     clearReplyTimer()
     setAgentTyping(true)
     replyTimerRef.current = window.setTimeout(() => {
-      const reply =
-        supportChatAutoReplies[replyIndexRef.current % supportChatAutoReplies.length] ??
-        supportChatAutoReplies[0]
+      const reply = getMockChatAutoReply(replyIndexRef.current)
       replyIndexRef.current += 1
       setMessages((current) => [
         ...current,
@@ -83,32 +89,32 @@ export function LiveChatModal({ open, onClose }: LiveChatModalProps) {
     }, 1100 + Math.floor(Math.random() * 700))
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     const text = draft.trim()
     if (!text || agentTyping) return
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        text,
-        at: formatClock(),
-      },
-    ])
     setDraft('')
-    scheduleAgentReply()
+    try {
+      const sent = await sendChatMessage(text)
+      setMessages((current) => [
+        ...current,
+        { ...sent, at: sent.at || formatClock() },
+      ])
+      scheduleAgentReply()
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    sendMessage()
+    void sendMessage()
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      sendMessage()
+      void sendMessage()
     }
   }
 
@@ -165,7 +171,7 @@ export function LiveChatModal({ open, onClose }: LiveChatModalProps) {
                 className={`bs-live-chat__bubble is-${message.role}`}
               >
                 <div className="bs-live-chat__bubble-meta">
-                  <strong>{isUser ? mockUser.firstName : supportSpecialist.name}</strong>
+                  <strong>{isUser ? (user?.firstName ?? 'Você') : supportSpecialist.name}</strong>
                   <time>{message.at}</time>
                 </div>
                 <p>{message.text}</p>

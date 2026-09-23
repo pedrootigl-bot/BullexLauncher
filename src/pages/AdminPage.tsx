@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AdminActionMenu } from '../components/admin/AdminActionMenu'
 import { AdminEmptyState } from '../components/admin/AdminEmptyState'
@@ -34,8 +34,14 @@ import {
   type AdminNavId,
   type AdminRewardRow,
 } from '../data/adminMock'
+import {
+  fetchAdminCampaigns,
+  fetchAdminCoupons,
+  fetchAdminMissions,
+  fetchAdminPassRewards,
+} from '../services/admin'
 import { formatBullstartDateTime } from '../services/bullstartAdmin'
-import { listDrawHistory } from '../services/bullstartDraw'
+import { loadDrawHistory } from '../services/bullstartDraw'
 import type { AdminDraw } from '../data/drawAdminMock'
 
 type DrawHistoryStatusFilter = 'all' | 'prepared' | 'completed'
@@ -67,6 +73,26 @@ export function AdminPage() {
   const [rewards, setRewards] = useState<AdminRewardRow[]>(() => [...adminPassRewards])
   const [campaignsTab, setCampaignsTab] = useState<'history' | 'banners'>('history')
   const [historyTick, setHistoryTick] = useState(0)
+  const [coupons, setCoupons] = useState<AdminCouponRow[]>(() => [...adminCoupons])
+  const [drawHistory, setDrawHistory] = useState<AdminDraw[]>([])
+
+  useEffect(() => {
+    void Promise.all([
+      fetchAdminMissions(),
+      fetchAdminCampaigns(),
+      fetchAdminPassRewards(),
+      fetchAdminCoupons(),
+    ]).then(([nextMissions, nextCampaigns, nextRewards, nextCoupons]) => {
+      setMissions(nextMissions)
+      setCampaigns(nextCampaigns)
+      setRewards(nextRewards)
+      setCoupons(nextCoupons)
+    })
+  }, [])
+
+  useEffect(() => {
+    void loadDrawHistory().then(setDrawHistory)
+  }, [historyTick])
 
   function setSection(id: AdminNavId) {
     navigate(adminSectionPath(id))
@@ -345,9 +371,6 @@ export function AdminPage() {
           { label: headerMeta.title },
         ]
 
-  void historyTick
-  const drawHistory = listDrawHistory()
-
   const headerActions =
     section === 'rewards' ? (
       <button type="button" className="bx-btn bx-btn--primary" onClick={() => openCreate('pass')}>
@@ -443,7 +466,7 @@ export function AdminPage() {
                   title="Cupons promocionais"
                   lead="Códigos ativos, pausados e expirados."
                 >
-                  <CouponsTable onEdit={openEditCoupon} />
+                  <CouponsTable coupons={coupons} onEdit={openEditCoupon} />
                 </ManagePanel>
               ) : null}
 
@@ -928,7 +951,13 @@ function DrawHistoryPanel({
   )
 }
 
-function CouponsTable({ onEdit }: { onEdit: (coupon: AdminCouponRow) => void }) {
+function CouponsTable({
+  coupons,
+  onEdit,
+}: {
+  coupons: AdminCouponRow[]
+  onEdit: (coupon: AdminCouponRow) => void
+}) {
   return (
     <div
       className="bx-admin-table bx-admin-table--manage bx-admin-table--coupons"
@@ -945,10 +974,10 @@ function CouponsTable({ onEdit }: { onEdit: (coupon: AdminCouponRow) => void }) 
           Ações
         </span>
       </div>
-      {adminCoupons.length === 0 ? (
+      {coupons.length === 0 ? (
         <p className="bx-admin-empty">Nenhum cupom cadastrado. Gere o primeiro código.</p>
       ) : null}
-      {adminCoupons.map((coupon) => (
+      {coupons.map((coupon) => (
         <div key={coupon.id} className="bx-admin-table__row" role="row">
           <span role="cell" className="bx-admin-table__entity">
             <strong>{coupon.name}</strong>

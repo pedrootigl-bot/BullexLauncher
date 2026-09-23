@@ -74,7 +74,7 @@ export function AdminCreateModal({
   kind,
   mode = 'create',
   initialValues,
-  occupiedLevels = [],
+  occupiedLevels: _occupiedLevels = [],
   occupiedKeys = [],
   onClose,
   onSubmit,

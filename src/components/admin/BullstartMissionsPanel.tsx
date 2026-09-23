@@ -10,12 +10,14 @@ import {
   downloadEligibleCsv,
   formatBullstartBRL,
   formatBullstartDateTime,
-  getBullstartEligible,
-  getBullstartOverview,
-  listBullstartSeasons,
+  loadBullstartEligible,
+  loadBullstartOverview,
+  loadBullstartSeasons,
   type BullstartEligibleRow,
+  type BullstartOverview,
   type EligibleSortKey,
 } from '../../services/bullstartAdmin'
+import type { BullstartSeason } from '../../data/bullstartAdminMock'
 import { whatsappHref } from '../../utils/whatsapp'
 import { AdminEmptyState } from './AdminEmptyState'
 import { AdminKpiCard } from './AdminKpiCard'
@@ -88,7 +90,7 @@ const SORT_OPTIONS: FilterOption<SortOptionValue>[] = [
 ]
 
 export function BullstartMissionsPanel() {
-  const seasons = listBullstartSeasons()
+  const [seasons, setSeasons] = useState<BullstartSeason[]>([])
   const [seasonId, setSeasonId] = useState<BullstartSeasonId>(DEFAULT_BULLSTART_SEASON_ID)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -96,8 +98,55 @@ export function BullstartMissionsPanel() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [showRewardBreakdown, setShowRewardBreakdown] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [overview, setOverview] = useState<BullstartOverview | null>(null)
+  const [eligible, setEligible] = useState<BullstartEligibleRow[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [activeFunnelKey, setActiveFunnelKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    void loadBullstartSeasons().then((list) => {
+      setSeasons(list)
+      setSeasonId((current) =>
+        list.some((item) => item.id === current) ? current : (list[0]?.id ?? current),
+      )
+    })
+  }, [])
 
   const season = seasons.find((item) => item.id === seasonId) ?? seasons[0]
+
+  useEffect(() => {
+    if (!season) return
+    let cancelled = false
+    setLoadError(null)
+    void Promise.all([
+      loadBullstartOverview({
+        seasonId,
+        periodStart: season.startsAt,
+        periodEnd: season.endsAt,
+      }),
+      loadBullstartEligible({
+        seasonId,
+        periodStart: season.startsAt,
+        periodEnd: season.endsAt,
+        search,
+        status: statusFilter,
+        sortBy,
+        sortDir,
+      }),
+    ])
+      .then(([nextOverview, nextEligible]) => {
+        if (cancelled) return
+        setOverview(nextOverview)
+        setEligible(nextEligible)
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        setLoadError(err instanceof Error ? err.message : 'Falha ao carregar BullStart')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [seasonId, season, search, statusFilter, sortBy, sortDir])
 
   const seasonOptions = useMemo<FilterOption<BullstartSeasonId>[]>(
     () =>
@@ -110,37 +159,16 @@ export function BullstartMissionsPanel() {
     [seasons],
   )
 
-  const overview = useMemo(
-    () =>
-      getBullstartOverview({
-        seasonId,
-        periodStart: season?.startsAt,
-        periodEnd: season?.endsAt,
-      }),
-    [seasonId, season?.startsAt, season?.endsAt],
-  )
-
-  const eligible = useMemo(
-    () =>
-      getBullstartEligible({
-        seasonId,
-        periodStart: season?.startsAt,
-        periodEnd: season?.endsAt,
-        search,
-        status: statusFilter,
-        sortBy,
-        sortDir,
-      }),
-    [seasonId, season?.startsAt, season?.endsAt, search, statusFilter, sortBy, sortDir],
-  )
-
-  const funnelMax = Math.max(
-    ...overview.funnel.map((item) => item.uniqueCompletions),
-    overview.missions.allCompleted,
-    1,
-  )
+  const funnelMax = overview
+    ? Math.max(
+        ...overview.funnel.map((item) => item.uniqueCompletions),
+        overview.missions.allCompleted,
+        1,
+      )
+    : 1
 
   const funnelColumns = useMemo(() => {
+    if (!overview) return []
     const stages = [
       ...overview.funnel.map((item) => ({
         key: item.code,
@@ -175,9 +203,8 @@ export function BullstartMissionsPanel() {
               : `${conversion}% da etapa anterior`,
       }
     })
-  }, [overview.funnel, overview.missions.allCompleted, funnelMax])
+  }, [overview, funnelMax])
 
-  const [activeFunnelKey, setActiveFunnelKey] = useState<string | null>(null)
   const activeFunnel = funnelColumns.find((column) => column.key === activeFunnelKey) ?? null
 
   const seasonDaysLeft = useMemo(() => {
@@ -208,6 +235,14 @@ export function BullstartMissionsPanel() {
 
   function openTraderDetail(row: BullstartEligibleRow) {
     setSelectedUserId(row.userId)
+  }
+
+  if (!overview || !season) {
+    return (
+      <div className="bx-admin-bullstart">
+        <p>{loadError ?? 'Carregando BullStart…'}</p>
+      </div>
+    )
   }
 
   return (

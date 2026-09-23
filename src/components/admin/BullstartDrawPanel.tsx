@@ -7,23 +7,24 @@ import {
 import type { AdminDraw, AdminDrawParticipant, DrawPrize } from '../../data/drawAdminMock'
 import { adminSectionPath } from '../../data/adminMock'
 import {
-  createDrawPrize,
+  createDrawPrizeAsync,
   executeDraw,
   getActivePreparedDraw,
   getDraw,
   getDrawParticipants,
   getDrawPrize,
-  listDrawHistory,
-  listDrawPrizes,
+  loadDrawHistory,
+  loadDrawPrizes,
   prepareDraw,
   resetDrawStoreForTests,
 } from '../../services/bullstartDraw'
 import {
   formatBullstartDateTime,
-  getBullstartEligible,
-  listBullstartSeasons,
+  loadBullstartEligible,
+  loadBullstartSeasons,
   type BullstartEligibleRow,
 } from '../../services/bullstartAdmin'
+import type { BullstartSeason } from '../../data/bullstartAdminMock'
 import { whatsappHref } from '../../utils/whatsapp'
 import { AdminActionMenu } from './AdminActionMenu'
 import { AdminEmptyState } from './AdminEmptyState'
@@ -48,7 +49,7 @@ type BullstartDrawPanelProps = {
 }
 
 export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps) {
-  const seasons = listBullstartSeasons()
+  const [seasons, setSeasons] = useState<BullstartSeason[]>([])
   const [seasonId, setSeasonId] = useState<BullstartSeasonId>(DEFAULT_BULLSTART_SEASON_ID)
   const [prizeId, setPrizeId] = useState('')
   const [prizeUnits, setPrizeUnits] = useState(1)
@@ -72,18 +73,32 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
   const [customImageOwned, setCustomImageOwned] = useState(false)
   const [customQty, setCustomQty] = useState('1')
   const [detailDraw, setDetailDraw] = useState<AdminDraw | null>(null)
+  const [liveEligible, setLiveEligible] = useState<BullstartEligibleRow[]>([])
+  const [prizes, setPrizes] = useState<DrawPrize[]>([])
+  const [history, setHistory] = useState<AdminDraw[]>([])
   const reelTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    void loadBullstartSeasons().then((list) => {
+      setSeasons(list)
+      setSeasonId((current) =>
+        list.some((item) => item.id === current) ? current : (list[0]?.id ?? current),
+      )
+    })
+  }, [])
 
   const season = seasons.find((item) => item.id === seasonId) ?? seasons[0]
 
-  const liveEligible = useMemo(
-    () => getBullstartEligible({ seasonId }),
-    [seasonId],
-  )
+  useEffect(() => {
+    void loadBullstartEligible({ seasonId }).then(setLiveEligible)
+  }, [seasonId])
 
-  const prizes = useMemo(() => listDrawPrizes(), [historyTick])
+  useEffect(() => {
+    void loadDrawPrizes().then(setPrizes)
+    void loadDrawHistory().then(setHistory)
+  }, [historyTick])
 
-  const selectedPrize: DrawPrize | null = prizeId ? getDrawPrize(prizeId) : null
+  const selectedPrize: DrawPrize | null = prizeId ? getDrawPrize(prizeId) ?? prizes.find((p) => p.id === prizeId) ?? null : null
 
   const maxUnits = useMemo(() => {
     if (!selectedPrize) return 1
@@ -96,16 +111,14 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
   }, [maxUnits, phase, prizeId])
 
   const activeDraw: AdminDraw | null = useMemo(() => {
-    if (activeDrawId) return getDraw(activeDrawId)
-    return getActivePreparedDraw(seasonId)
-  }, [activeDrawId, seasonId, historyTick, phase])
+    if (activeDrawId) return getDraw(activeDrawId) ?? history.find((d) => d.id === activeDrawId) ?? null
+    return getActivePreparedDraw(seasonId) ?? history.find((d) => d.seasonId === seasonId && d.status === 'prepared') ?? null
+  }, [activeDrawId, seasonId, historyTick, phase, history])
 
   const snapshotParticipants = useMemo(() => {
     if (!activeDraw) return [] as AdminDrawParticipant[]
     return getDrawParticipants(activeDraw.id)
   }, [activeDraw, historyTick])
-
-  const history = useMemo(() => listDrawHistory(), [historyTick])
 
   const displayRows: Array<BullstartEligibleRow | AdminDrawParticipant> =
     activeDraw && (phase === 'prepared' || phase === 'drawing' || phase === 'completed')
@@ -217,10 +230,10 @@ export function BullstartDrawPanel({ onHistoryChange }: BullstartDrawPanelProps)
     onHistoryChange?.()
   }
 
-  function handleCreateCustomPrize() {
+  async function handleCreateCustomPrize() {
     setError(null)
     try {
-      const prize = createDrawPrize({
+      const prize = await createDrawPrizeAsync({
         name: customName,
         id: customId || undefined,
         category: customCategory || undefined,

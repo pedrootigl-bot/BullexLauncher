@@ -1,9 +1,9 @@
-import { mockUser } from '../data/missionsMock'
+import { getCurrentUser, isCurrentUserAdmin as authIsAdmin } from '../services/auth'
 
-/** Acesso admin no MVP (sem auth real). Trocar por JWT/role no backend. */
+/** Acesso admin — role da sessão (mock ou JWT). */
 
 export function isCurrentUserAdmin(): boolean {
-  return mockUser.role === 'admin'
+  return authIsAdmin()
 }
 
 export function isAdminArea(): boolean {
@@ -17,4 +17,8 @@ export function isAdminArea(): boolean {
  */
 export function canViewAdminDrawDetails(): boolean {
   return isCurrentUserAdmin()
+}
+
+export function getSessionTraderId(): string {
+  return getCurrentUser().traderId
 }

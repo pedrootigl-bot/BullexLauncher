@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AppSidebar } from '../components/missions/AppSidebar'
 import { DashboardHeader } from '../components/missions/DashboardHeader'
+import { useResource } from '../hooks/useResource'
+import { fetchRewardsDashboard } from '../services/rewards'
 import {
   couponStatusLabel,
   couponTypeLabel,
   formatDaysUntilLabel,
   getCouponValidityPercent,
   getDaysUntilIso,
-  mockRewardCoupons,
-  mockRewardsStats,
   type CouponStatus,
   type CouponType,
   type RewardCoupon,
@@ -24,42 +24,49 @@ const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
 ]
 
 export function RewardsPage() {
+  const { data, loading, error } = useResource(fetchRewardsDashboard, [])
+  const allCoupons = data?.coupons ?? []
+  const stats = data?.stats
+
   const [filter, setFilter] = useState<StatusFilter>('all')
-  const [selectedId, setSelectedId] = useState<string | null>(
-    mockRewardCoupons.find((item) => item.status === 'available')?.id ??
-      mockRewardCoupons[0]?.id ??
-      null,
-  )
-  const stats = mockRewardsStats
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!data) return
+    const preferred =
+      data.coupons.find((item) => item.status === 'available')?.id ?? data.coupons[0]?.id ?? null
+    setSelectedId(preferred)
+  }, [data])
+
   const recommended =
-    mockRewardCoupons.find((item) => item.status === 'available') ?? mockRewardCoupons[0]
-  const nextExpiryDays = getDaysUntilIso(stats.nextExpiryIso)
+    allCoupons.find((item) => item.status === 'available') ?? allCoupons[0]
+  const nextExpiryDays = stats ? getDaysUntilIso(stats.nextExpiryIso) : 0
 
   const coupons = useMemo(() => {
-    if (filter === 'all') return mockRewardCoupons
-    return mockRewardCoupons.filter((item) => item.status === filter)
-  }, [filter])
+    if (filter === 'all') return allCoupons
+    return allCoupons.filter((item) => item.status === filter)
+  }, [filter, allCoupons])
 
   const filterCounts = useMemo(
     () => ({
-      all: mockRewardCoupons.length,
-      available: mockRewardCoupons.filter((item) => item.status === 'available').length,
-      used: mockRewardCoupons.filter((item) => item.status === 'used').length,
-      expired: mockRewardCoupons.filter((item) => item.status === 'expired').length,
+      all: allCoupons.length,
+      available: allCoupons.filter((item) => item.status === 'available').length,
+      used: allCoupons.filter((item) => item.status === 'used').length,
+      expired: allCoupons.filter((item) => item.status === 'expired').length,
     }),
-    [],
+    [allCoupons],
   )
 
   const selected =
     coupons.find((item) => item.id === selectedId) ??
     coupons[0] ??
-    mockRewardCoupons.find((item) => item.id === selectedId) ??
+    allCoupons.find((item) => item.id === selectedId) ??
     null
 
   function handleFilterChange(next: StatusFilter) {
     setFilter(next)
     const list =
-      next === 'all' ? mockRewardCoupons : mockRewardCoupons.filter((item) => item.status === next)
+      next === 'all' ? allCoupons : allCoupons.filter((item) => item.status === next)
     setSelectedId(list[0]?.id ?? null)
   }
 
@@ -67,6 +74,20 @@ export function RewardsPage() {
     if (!recommended) return
     setFilter('all')
     setSelectedId(recommended.id)
+  }
+
+  if (loading || !stats) {
+    return (
+      <div className="bs-shell">
+        <DashboardHeader />
+        <div className="bs-shell__body">
+          <AppSidebar />
+          <div className="bs-main bs-rewards">
+            <p>{error ? `Erro: ${error}` : 'Carregando recompensas…'}</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

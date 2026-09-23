@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import {
   drawDeliveryStatusLabel,
   eligibleStatusLabel,
@@ -7,7 +7,8 @@ import {
 import {
   formatBullstartBRL,
   formatBullstartDateTime,
-  getBullstartEligibleDetail,
+  loadBullstartEligibleDetail,
+  type BullstartEligibleDetail,
 } from '../../services/bullstartAdmin'
 import { whatsappHref } from '../../utils/whatsapp'
 
@@ -22,10 +23,11 @@ export function BullstartEligibleDetailModal({
   userId,
   onClose,
 }: BullstartEligibleDetailModalProps) {
-  const detail = useMemo(
-    () => getBullstartEligibleDetail(seasonId, userId),
-    [seasonId, userId],
-  )
+  const [detail, setDetail] = useState<BullstartEligibleDetail | null>(null)
+
+  useEffect(() => {
+    void loadBullstartEligibleDetail(seasonId, userId).then(setDetail)
+  }, [seasonId, userId])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
