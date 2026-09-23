@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AppSidebar } from '../components/missions/AppSidebar'
 import { DashboardHeader } from '../components/missions/DashboardHeader'
+import { LiveChatModal } from '../components/missions/LiveChatModal'
 import {
   supportChannels,
   supportFaqs,
@@ -13,9 +14,26 @@ import {
 
 export function SupportPage() {
   const [openFaqId, setOpenFaqId] = useState<string | null>(null)
+  const [chatOpen, setChatOpen] = useState(false)
 
   function handleChannel(id: SupportChannelId) {
-    console.log('suporte channel', id)
+    switch (id) {
+      case 'chat':
+        setChatOpen(true)
+        return
+      case 'help': {
+        const faq = document.getElementById('bs-support-faq-title')
+        faq?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        return
+      }
+      case 'ticket':
+        console.log('suporte channel', id)
+        return
+      default: {
+        const _exhaustive: never = id
+        return _exhaustive
+      }
+    }
   }
 
   return (
@@ -49,11 +67,11 @@ export function SupportPage() {
 
           <section className="bs-support__tiles" aria-label="Indicadores de suporte">
             {supportTiles.map((tile) => (
-              <article key={tile.id} className="bs-support-tile">
+              <article key={tile.id} className={`bs-support-tile is-${tile.id}`}>
                 <span className="bs-support-tile__icon" aria-hidden="true">
                   <TileIcon icon={tile.icon} />
                 </span>
-                <div>
+                <div className="bs-support-tile__copy">
                   <p>{tile.label}</p>
                   <strong>{tile.value}</strong>
                 </div>
@@ -152,6 +170,8 @@ export function SupportPage() {
           </div>
         </div>
       </div>
+
+      <LiveChatModal open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   )
 }

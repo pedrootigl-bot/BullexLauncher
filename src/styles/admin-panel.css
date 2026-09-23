@@ -2800,7 +2800,7 @@
 }
 
 .bx-bullstart-wa {
-  color: var(--bx-green);
+  color: #fff;
   font-size: 0.72rem;
   font-weight: 600;
   text-decoration: none;
@@ -2810,6 +2810,7 @@
 }
 
 .bx-bullstart-wa:hover {
+  color: #fff;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -2838,9 +2839,13 @@
 
 .bx-bullstart-link--name {
   font-size: 0.86rem;
-  color: var(--bx-green);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.bx-bullstart-link--name:hover {
+  color: #fff;
+  text-decoration: none;
 }
 
 .bx-bullstart-check {
@@ -5549,13 +5554,14 @@ a.bs-admin-modal__cta--secondary:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: #8cf28c;
+  color: #fff;
   font-size: 0.86rem;
   font-weight: 650;
   text-decoration: none;
 }
 
 .bx-draw-prize-detail__wa:hover {
+  color: #fff;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -6030,6 +6036,140 @@ a.bs-admin-modal__cta--secondary:hover {
 
 .bx-sorteios-hub .bx-admin-engage__head {
   align-items: flex-start;
+}
+
+.bx-draw-history-head {
+  flex-wrap: wrap;
+  gap: 1rem 1.15rem;
+}
+
+.bx-draw-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.bx-draw-status-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.28rem;
+  border-radius: 12px;
+  border: 1px solid var(--bx-border);
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.bx-draw-status-filter__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.15rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--bx-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding: 0.35rem 0.65rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.bx-draw-status-filter__btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bx-draw-status-filter__btn.is-active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.bx-draw-status-filter__btn.is-prepared.is-active {
+  color: #ffd27a;
+  background: rgba(255, 176, 32, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 176, 32, 0.28);
+}
+
+.bx-draw-status-filter__btn.is-completed.is-active {
+  color: var(--bx-green);
+  background: rgba(158, 255, 0, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(158, 255, 0, 0.28);
+}
+
+.bx-draw-status-filter__dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.bx-draw-status-filter__dot.is-prepared {
+  background: #ffb020;
+  box-shadow: 0 0 0 3px rgba(255, 176, 32, 0.12);
+}
+
+.bx-draw-status-filter__dot.is-completed {
+  background: var(--bx-green);
+  box-shadow: 0 0 0 3px rgba(158, 255, 0, 0.12);
+}
+
+.bx-draw-status-filter__label {
+  white-space: nowrap;
+}
+
+.bx-draw-status-filter__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  min-height: 1.2rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.bx-draw-status-filter__btn.is-active .bx-draw-status-filter__count {
+  background: rgba(0, 0, 0, 0.28);
+  opacity: 1;
+}
+
+@media (max-width: 720px) {
+  .bx-draw-history-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .bx-draw-status-filter {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bx-draw-status-filter__btn {
+    justify-content: center;
+    padding-inline: 0.4rem;
+  }
+
+  .bx-draw-history-actions .bx-btn,
+  .bx-draw-history-actions a {
+    flex: 1 1 auto;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 @media (max-width: 900px) {

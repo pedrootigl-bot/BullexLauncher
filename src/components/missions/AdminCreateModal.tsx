@@ -109,7 +109,7 @@ export function AdminCreateModal({
   const unitPreviewLabel =
     values.unit === 'brl' ? 'R$' : values.unit === 'days' ? 'dias' : 'volume'
   const missionProgressHint =
-    values.target.trim().length > 0
+    (values.target ?? '').trim().length > 0
       ? `Meta: ${values.target} ${unitPreviewLabel} · +${values.points || '0'} pontos`
       : 'Defina a meta para prévia do progresso.'
 

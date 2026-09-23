@@ -38,6 +38,17 @@ import { formatBullstartDateTime } from '../services/bullstartAdmin'
 import { listDrawHistory } from '../services/bullstartDraw'
 import type { AdminDraw } from '../data/drawAdminMock'
 
+type DrawHistoryStatusFilter = 'all' | 'prepared' | 'completed'
+
+const DRAW_STATUS_FILTERS: {
+  value: DrawHistoryStatusFilter
+  label: string
+}[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'prepared', label: 'Preparados' },
+  { value: 'completed', label: 'Concluídos' },
+]
+
 type AdminModalState = {
   kind: AdminCreateKind
   mode: AdminModalMode
@@ -784,8 +795,17 @@ function DrawHistoryPanel({
   draws: AdminDraw[]
   onRefresh: () => void
 }) {
-  const [statusFilter, setStatusFilter] = useState<'all' | 'prepared' | 'completed'>('all')
+  const [statusFilter, setStatusFilter] = useState<DrawHistoryStatusFilter>('all')
   const [detailDraw, setDetailDraw] = useState<AdminDraw | null>(null)
+
+  const counts = useMemo(
+    () => ({
+      all: draws.length,
+      prepared: draws.filter((draw) => draw.status === 'prepared').length,
+      completed: draws.filter((draw) => draw.status === 'completed').length,
+    }),
+    [draws],
+  )
 
   const filtered = draws.filter(
     (draw) => statusFilter === 'all' || draw.status === statusFilter,
@@ -793,23 +813,37 @@ function DrawHistoryPanel({
 
   return (
     <section className="bx-admin-panel bx-admin-panel--manage">
-      <div className="bx-admin-engage__head">
+      <div className="bx-admin-engage__head bx-draw-history-head">
         <div className="bx-admin-engage__copy">
           <h2>Histórico de sorteios</h2>
           <p>Resultados permanentes e sorteios preparados.</p>
         </div>
-        <div className="bx-page-header__actions">
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as typeof statusFilter)
-            }
-            aria-label="Filtrar status"
+        <div className="bx-page-header__actions bx-draw-history-actions">
+          <div
+            className="bx-draw-status-filter"
+            role="group"
+            aria-label="Filtrar por status"
           >
-            <option value="all">Todos</option>
-            <option value="prepared">Preparados</option>
-            <option value="completed">Concluídos</option>
-          </select>
+            {DRAW_STATUS_FILTERS.map((option) => {
+              const active = statusFilter === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`bx-draw-status-filter__btn is-${option.value}${active ? ' is-active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(option.value)}
+                >
+                  <span
+                    className={`bx-draw-status-filter__dot is-${option.value}`}
+                    aria-hidden="true"
+                  />
+                  <span className="bx-draw-status-filter__label">{option.label}</span>
+                  <span className="bx-draw-status-filter__count">{counts[option.value]}</span>
+                </button>
+              )
+            })}
+          </div>
           <button type="button" className="bx-btn bx-btn--ghost" onClick={onRefresh}>
             Atualizar
           </button>

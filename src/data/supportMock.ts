@@ -33,7 +33,7 @@ export const supportIntro = {
 
 export const supportTiles: SupportTile[] = [
   { id: 'online', label: 'Status', value: 'Online agora', icon: 'online' },
-  { id: 'time', label: 'Tempo médio', value: '< 5 minutos', icon: 'clock' },
+  { id: 'time', label: 'Tempo médio', value: '5 minutos', icon: 'clock' },
   { id: 'tickets', label: 'Tickets abertos', value: '2 em andamento', icon: 'ticket' },
   { id: 'privacy', label: 'Privacidade', value: 'Atendimento seguro', icon: 'shield' },
 ]
@@ -115,6 +115,40 @@ export const supportSpecialist = {
   imageSrc: '/images/support-specialist.jpg?v2',
   imageAlt: 'Ana Souza, especialista de suporte Bullex',
 }
+
+export type SupportChatRole = 'agent' | 'user' | 'system'
+
+export type SupportChatMessage = {
+  id: string
+  role: SupportChatRole
+  text: string
+  at: string
+}
+
+/** Mensagens iniciais do chat ao vivo (MVP sem backend). */
+export const supportChatSeed: SupportChatMessage[] = [
+  {
+    id: 'sys-1',
+    role: 'system',
+    text: 'Você entrou no chat com a equipe Bullex. Tempo médio de resposta: menos de 5 minutos.',
+    at: 'Agora',
+  },
+  {
+    id: 'agent-1',
+    role: 'agent',
+    text: `Olá! Sou ${supportSpecialist.name}, ${supportSpecialist.role}. Como posso te ajudar hoje?`,
+    at: 'Agora',
+  },
+]
+
+/** Respostas simuladas do atendente enquanto não houver websocket/API. */
+export const supportChatAutoReplies = [
+  'Entendi. Pode me enviar mais detalhes do que aconteceu?',
+  'Estou verificando isso por aqui. Um instante, por favor.',
+  'Obrigado pela informação. Vou te orientar no próximo passo.',
+  'Se preferir, também posso abrir um ticket para acompanhamento do protocolo.',
+  'Qualquer dúvida adicional, é só mandar por aqui — estou online.',
+]
 
 export const supportBrand = {
   quote: 'TRADERS REAIS, SUPORTE DE VERDADE.',
